@@ -12,7 +12,7 @@ describe('Rackit', function() {
 		it('should have default options', function() {
 			var rackit = new Rackit();
 			rackit.should.be.an['instanceof'](Rackit);
-			rackit.options.pre.should.equal('dev');
+			rackit.options.prefix.should.equal('dev');
 			rackit.options.useCDN.should.equal(true);
 			rackit.options.baseURI.should.equal(host + base);
 		});
