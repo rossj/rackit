@@ -22,7 +22,7 @@ For security, privacy, and ease, Rackit stores files on the cloud with random na
         'key' : '<your Rackspace API key>'
     }, function(err) {
         // Add a local file to the cloud
-        rackit.add('./image.jpg', function(err, cloudPath) {
+        rackit.add(__dirname + '/image.jpg', function(err, cloudPath) {
             // Get the CDN URI of the file
             console.log(rackit.getURI(cloudPath));
         });
@@ -38,7 +38,7 @@ Optionally, you may create your own Rackit instance. This is necessary if you ar
     
     myRackit.init(function(err) {
         // Add a local file to the cloud
-        myRackit.add('./image.jpg', function(err, cloudPath) {
+        myRackit.add(__dirname + '/image.jpg', function(err, cloudPath) {
             // Get the CDN URI of the file
             console.log(myRackit.getURI(cloudPath));
         });
