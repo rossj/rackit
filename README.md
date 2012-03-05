@@ -8,7 +8,7 @@ With Rackit, you specify a container prefix, such as 'file'. Then, Rackit will c
 
 For security, privacy, and ease, Rackit stores files on the cloud with random names.
 
-# Install (coming soon)
+# Install
 
     $ npm install rackit
 
