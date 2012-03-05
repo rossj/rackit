@@ -6,6 +6,8 @@ Cloud Files has a recommended limit of 50,000 files per container. Rackit knows 
 
 With Rackit, you specify a container prefix, such as 'file'. Then, Rackit will create containers ['file0', 'file1', ...] as necessary.
 
+For security, privacy, and ease, Rackit stores files on the cloud with random names.
+
 # Install (coming soon)
 
     $ npm install rackit
@@ -20,9 +22,9 @@ With Rackit, you specify a container prefix, such as 'file'. Then, Rackit will c
         'key' : '<your Rackspace API key>'
     }, function(err) {
         // Add a local file to the cloud
-        rackit.add('./image.jpg', function(err, sCloudPath) {
+        rackit.add('./image.jpg', function(err, cloudPath) {
             // Get the CDN URI of the file
-            console.log(rackit.getURI(sCloudPath));
+            console.log(rackit.getURI(cloudPath));
         });
     });
 
@@ -36,9 +38,9 @@ Optionally, you may create your own Rackit instance. This is necessary if you ar
     
     myRackit.init(function(err) {
         // Add a local file to the cloud
-        myRackit.add('./image.jpg', function(err, sCloudPath) {
+        myRackit.add('./image.jpg', function(err, cloudPath) {
             // Get the CDN URI of the file
-            console.log(myRackit.getURI(sCloudPath));
+            console.log(myRackit.getURI(cloudPath));
         });
     });
     
@@ -46,13 +48,48 @@ Optionally, you may create your own Rackit instance. This is necessary if you ar
 
 When initializing Rackit, here are the options and defaults:
 
-* user: '' - Your Rackspace username.
-* key: '' - Your Rackspace API key.
-* prefix: 'dev' - The prefix for your Cloud Files containers.
-* useCDN: true - Tells Rackit whether to CDN enable new containers it creates.
-* baseURI: 'https://auth.api.rackspacecloud.com/v1.0' - The API entry point. May change depending on your country.
-* useSNET: false - Whether or not to use SNET for super-fast Cloud Server to Cloud File networking.
-* verbose: false - If set to true, log messages will be generated.
-* logger: console.log - If verbose is true, this function will recieve the log messages.
+- user: '' - your Rackspace username
+- key: '' - your Rackspace API key
+- prefix: 'dev' - the prefix for your Cloud Files containers
+- baseURI: 'https://auth.api.rackspacecloud.com/v1.0' - the API entry point, which may change depending on your country
+- useSNET: false - whether or not to use SNET for super-fast Cloud Server to Cloud File networking
+- useCDN: true - tells Rackit whether to CDN enable new containers it creates
+- useSSL: true - tells Rackit whether to use the SSL version of CDN URIs
+- verbose: false - if set to true, log messages will be generated
+- logger: console.log - if verbose is true, this function will recieve the log messages
+
+        
+# Methods
+### #add(localPath, [options,] callback)
+- localPath - a path to the file to upload
+- options - a hash of additional options
+  - type - a MIME type (e.g. 'Image/JPEG'). If not specified, mime-magic is used.
+  - meta - a hash of additional metadata to store along with the file
+- callback(err, cloudPath) - cloudPath is of the form 'container/file-name' and is used by Rackit to identify the file
+
+Uploads a file to the cloud. The uploaded file will be given a random 24-character file name.
+
+### #get(cloudPath, localPath, callback)
+- cloudPath - of the form 'container/file-name'
+- localPath - where to put the downloaded file
+- callback(err)
+
+Downloads a file from the cloud.
+
+### #remove(cloudPath, callback)
+
+Permanently deletes a file from the cloud.
+
+### #setMeta(cloudPath, meta, callback)
+
+Upserts the metadata for the specified cloud file.
+
+### #getURI(cloudPath)
+
+Returns the complete CDN URI for a given file. Will only work if the file's container is CDN enabled.
+
+# TODO
+
+* Finish writing test cases
 
 ** theoretical limit
