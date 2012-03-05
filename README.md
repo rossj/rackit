@@ -6,7 +6,7 @@ Cloud Files has a recommended limit of 50,000 files per container. Rackit knows 
 
 With Rackit, you specify a container prefix, such as 'file'. Then, Rackit will create containers ['file0', 'file1', ...] as necessary.
 
-For security, privacy, and ease, Rackit stores files on the cloud with random names.
+For security, privacy, and ease, Rackit stores files on the cloud with random names, which it returns to you.
 
 # Install
 
