@@ -65,7 +65,7 @@ When initializing Rackit, here are the options and defaults:
 - options - a hash of additional options
   - type - a MIME type (e.g. 'Image/JPEG'). If not specified, mime-magic is used.
   - meta - a hash of additional metadata to store along with the file
-- callback(err, cloudPath) - cloudPath is of the form 'container/file-name' and is used by Rackit to identify the file
+- callback(err, cloudContainer, cloudFileName) - returns information about the location of the file. You should concatenate the container and file name in the form 'container/file-name' for storage. This format is used as input to other methods.
 
 Uploads a file to the cloud. The uploaded file will be given a random 24-character file name.
 
