@@ -48,24 +48,29 @@ Optionally, you may create your own Rackit instance. This is necessary if you ar
 
 When initializing Rackit, here are the options and defaults:
 
-- user: '' - your Rackspace username
-- key: '' - your Rackspace API key
-- prefix: 'dev' - the prefix for your Cloud Files containers
-- baseURI: 'https://auth.api.rackspacecloud.com/v1.0' - the API entry point, which may change depending on your country
-- useSNET: false - whether or not to use SNET for super-fast Cloud Server to Cloud File networking
-- useCDN: true - tells Rackit whether to CDN enable new containers it creates
-- useSSL: true - tells Rackit whether to use the SSL version of CDN URIs
-- verbose: false - if set to true, log messages will be generated
-- logger: console.log - if verbose is true, this function will recieve the log messages
+    {
+        user : '', // Your Rackspace username
+		key : '', // Your Rackspace API key
+		prefix : 'dev', // The prefix for your Cloud Files containers
+		baseURI : 'https://auth.api.rackspacecloud.com/v1.0', // The API entry point - may change based on your country
+		tempURLKey : null, // A secret for generating temporary URLs
+		useSNET : false,
+		useCDN : true,
+		useSSL : true,
+		verbose : false, // If set to true, log messages will be generated
+		logger : console.log // Function to receive log messages
+    }
 
         
 # Methods
 ### #add(localPath, [options,] callback)
-- localPath - a path to the file to upload
-- options - a hash of additional options
-  - type - a MIME type (e.g. 'Image/JPEG'). If not specified, mime-magic is used.
-  - meta - a hash of additional metadata to store along with the file
-- callback(err, cloudContainer, cloudFileName) - returns information about the location of the file. You should concatenate the container and file name in the form 'container/file-name' for storage. This format is used as input to other methods.
+- localPath - A path to the file to upload
+- options - A hash of additional options
+  - type - A MIME type (e.g. 'Image/JPEG'). If not specified, mime-magic is used.
+  - filename - What to name the file on Cloud Files. Omit to have Rackit generate a UID.
+  - meta - A hash of additional metadata to store along with the file.
+  - headers - A hash of additional headers to send.
+- callback(err, cloudPath) - returns information about the location of the file. In the form 'container/file-name' to be used as input to other methods.
 
 Uploads a file to the cloud. The uploaded file will be given a random 24-character file name.
 
@@ -84,9 +89,9 @@ Permanently deletes a file from the cloud.
 
 Upserts the metadata for the specified cloud file.
 
-### #getURI(cloudPath)
+### #getURI(cloudPath [, ttl])
 
-Returns the complete CDN URI for a given file. Will only work if the file's container is CDN enabled.
+Returns a URI for a given file. If the ttl parameter is omitted, then a CDN URI will be returned (if the container is CDN enabled). If ttl is specified, a temporary URI will be given which is valid for ttl seconds.
 
 # TODO
 
