@@ -11,7 +11,7 @@
 	},
 	"main": "./lib/main.js",
 	"scripts": {
-		"test": "mocha --reporter spec"
+		"test": "node_modules/.bin/mocha --reporter spec"
 	},
 	"engines": {
 		"node": ">= 0.5.x"
