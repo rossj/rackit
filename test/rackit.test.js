@@ -1,46 +1,48 @@
 /*global require, __dirname, describe, it, before, beforeEach, after*/
 
-var Rackit = require('../lib/rackit.js').Rackit;
+var Rackit = require('../lib/main.js').Rackit;
+var url = require('url');
 var async = require('async');
 var should = require('should');
 var nock = require('nock');
 
 // Fake vars for our mock
-var host = 'https://auth.api.rackspacecloud.com';
-var base = '/v1.0';
-var user = 'boopity';
-var key = 'bop';
-var storage = {
-	base : 'https://storage.blablah.com',
-	path : '/v1/blah'
+var clientOptions = Rackit.defaultOptions;
+
+var mockOptions = {
+	user : 'boopity',
+	key : 'bop',
+	tempURLKey : '3522d2sa',
+	storage : 'https://storage.blablah.com/v1/blah',
+	cdn : 'https://cdn.blablah.com/v1/blah',
+	token : 'boopitybopitydadabop'
 };
-var cdn = {
-	base : 'https://cdn.blablah.com',
-	path : '/v1/blah'
-};
-var token = 'boopitybopitydadabop';
 
 var superNock = {
 	aScopes : [],
-	setupResponse : function() {
-		this.setupAuthResponse().setupStorageResponse().setupCDNResponse();
+	typicalResponse : function() {
+		return this.auth().storage().CDN();
 	},
-	setupAuthResponse : function() {
-
+	auth : function() {
 		// Setup nock to respond to a good auth request, twice
-		var scope = nock(host)
-		//
-		.get(base).matchHeader('X-Auth-User', user).matchHeader('X-Auth-Key', key)
-		//
-		.reply(204, 'No Content', {
-			'x-storage-url' : storage.base + storage.path,
-			'x-cdn-management-url' : cdn.base + cdn.path,
-			'x-auth-token' : token
+		var base = url.parse(clientOptions.baseURI);
+		var scope = nock(base.href).get(base.path).matchHeader('X-Auth-User', mockOptions.user).matchHeader('X-Auth-Key', mockOptions.key).reply(204, 'No Content', {
+			'x-storage-url' : mockOptions.storage,
+			'x-cdn-management-url' : mockOptions.cdn,
+			'x-auth-token' : mockOptions.token
 		});
+
 		this.aScopes.push(scope);
 		return this;
 	},
-	setupStorageResponse : function() {
+	tempURL : function() {
+		var storage = url.parse(mockOptions.storage);
+		var scope = nock(storage.href).get(storage.path).matchHeader('X-Account-Meta-Temp-Url-Key', mockOptions.tempURLKey).reply(204, 'No Content');
+
+		this.aScopes.push(scope);
+		return this;
+	},
+	storage : function() {
 
 		var aContainers = [{
 			name : 'one',
@@ -55,16 +57,14 @@ var superNock = {
 			count : 3,
 			bytes : 12
 		}];
-		var scope = nock(storage.base)
-		//
-		.matchHeader('X-Auth-Token', token).get(storage.path + '?format=json')
-		//
-		.reply(200, JSON.stringify(aContainers));
+
+		var storage = url.parse(mockOptions.storage);
+		var scope = nock(storage.href).get(storage.path + '?format=json').matchHeader('X-Auth-Token', mockOptions.token).reply(200, JSON.stringify(aContainers));
 
 		this.aScopes.push(scope);
 		return this;
 	},
-	setupCDNResponse : function() {
+	CDN : function() {
 		var aContainers = [{
 			name : 'one',
 			cdn_enabled : true,
@@ -82,18 +82,16 @@ var superNock = {
 			cdn_ssl_uri : 'https://c2.ssl.cf1.rackcdn.com',
 			cdn_streaming_uri : 'https://c2.r2.stream.cf1.rackcdn.com'
 		}];
-		var scope = nock(cdn.base)
-		//
-		.matchHeader('X-Auth-Token', token).get(cdn.path + '?format=json')
-		//
-		.reply(200, JSON.stringify(aContainers));
+
+		var cdn = url.parse(mockOptions.cdn);
+		var scope = nock(cdn.href).get(cdn.path + '?format=json').matchHeader('X-Auth-Token', mockOptions.token).reply(200, JSON.stringify(aContainers));
 
 		this.aScopes.push(scope);
 		return this;
 	},
 	allDone : function() {
 		// Assert that all the scopes are done
-		for(var i = 0; i < this.aScopes.length; i++) {
+		for (var i = 0; i < this.aScopes.length; i++) {
 			this.aScopes[i].done();
 		}
 		// Clear all scopes
@@ -109,7 +107,7 @@ describe('Rackit', function() {
 			rackit.should.be.an['instanceof'](Rackit);
 			rackit.options.prefix.should.equal('dev');
 			rackit.options.useCDN.should.equal(true);
-			rackit.options.baseURI.should.equal(host + base);
+			rackit.options.baseURI.should.equal('https://auth.api.rackspacecloud.com/v1.0');
 		});
 		it('should allow overriding of default options', function() {
 			var rackit = new Rackit({
@@ -119,7 +117,7 @@ describe('Rackit', function() {
 			rackit.options.pre.should.equal('dep');
 			rackit.options.useCDN.should.equal(false);
 			// Check non-overridden options are still there
-			rackit.options.baseURI.should.equal(host + base);
+			rackit.options.baseURI.should.equal('https://auth.api.rackspacecloud.com/v1.0');
 		});
 	});
 	describe('#init', function() {
@@ -129,16 +127,18 @@ describe('Rackit', function() {
 			rackit.init(function(err) {
 				should.exist(err);
 				err.should.be.an['instanceof'](Error);
+				err.message.should.equal('No credentials');
 				cb();
 			});
 		});
 		it('should return an error when bad credentials are given', function(cb) {
 			// Setup nock to respond to bad auth request
-			var scope = nock(host).get(base).reply(401, 'Unauthorized');
+			var uri = url.parse(clientOptions.baseURI);
+			var scope = nock(uri.href).get(uri.path).reply(401, 'Unauthorized');
 
 			var rackit = new Rackit({
-				user : user + 'blahblah',
-				key : key + 'bloopidy'
+				user : mockOptions.user + 'blahblah',
+				key : mockOptions.key + 'bloopidy'
 			});
 			rackit.init(function(err) {
 				should.exist(err);
@@ -147,12 +147,12 @@ describe('Rackit', function() {
 				cb();
 			});
 		});
-		it('should get container info when good credentials are given', function(cb) {
-			superNock.setupResponse();
+		it('should not return an error with good credentials', function(cb) {
+			superNock.typicalResponse();
 
 			var rackit = new Rackit({
-				user : user,
-				key : key
+				user : mockOptions.user,
+				key : mockOptions.key,
 			});
 			rackit.init(function(err) {
 				should.not.exist(err);
@@ -160,12 +160,26 @@ describe('Rackit', function() {
 				cb();
 			});
 		});
-		it('should properly cache container info when good credentials are given', function(cb) {
-			superNock.setupResponse();
+		it('should set temp url key if provided, and get container info', function(cb) {
+			superNock.typicalResponse().tempURL();
 
 			var rackit = new Rackit({
-				user : user,
-				key : key
+				user : mockOptions.user,
+				key : mockOptions.key,
+				tempURLKey : mockOptions.tempURLKey
+			});
+			rackit.init(function(err) {
+				should.not.exist(err);
+				superNock.allDone();
+				cb();
+			});
+		});
+		it('should get container info and cache it', function(cb) {
+			superNock.typicalResponse();
+
+			var rackit = new Rackit({
+				user : mockOptions.user,
+				key : mockOptions.key,
 			});
 			rackit.init(function(err) {
 				should.not.exist(err);
@@ -182,17 +196,17 @@ describe('Rackit', function() {
 				cb();
 			});
 		});
+
 	});
 	describe('#add', function() {
 		var rackit;
 
 		beforeEach(function(cb) {
+			superNock.typicalResponse();
 			rackit = new Rackit({
-				user : user,
-				key : key
+				user : mockOptions.user,
+				key : mockOptions.key,
 			});
-			
-			superNock.setupResponse();
 			rackit.init(function(err) {
 				superNock.allDone();
 				cb(err);
