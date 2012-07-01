@@ -1,6 +1,6 @@
 # Rackit
 
-Rackit is a module for managing large collections of files on Rackspace Cloud Files. With Rackit, you don't have to worry about containers, CDN enabling containers, or re-authenticating when your key has expired. Rackit automatically creates containers as needed, and will seamlessly reauthenticate if your API key expires. Rackit also supports generation of temporary, time-limited file URLs.
+Rackit is a module for managing large collections of files on Rackspace Cloud Files. Rackit automatically creates containers as needed, and will seamlessly reauthenticate if your API key expires. Rackit also supports the generation of temporary, time-limited file URLs.
 
 Cloud Files has a recommended limit of 50,000 files per container. Rackit knows this, and will automatically create new containers as necessary.
 
