@@ -25,8 +25,8 @@ var superNock = {
 	},
 	auth : function() {
 		// Setup nock to respond to a good auth request, twice
-		var base = url.parse(clientOptions.baseURI);
-		var scope = nock(base.href).get(base.path).matchHeader('X-Auth-User', mockOptions.user).matchHeader('X-Auth-Key', mockOptions.key).reply(204, 'No Content', {
+		var path = url.parse(clientOptions.baseURI).pathname;
+		var scope = nock(clientOptions.baseURI).get(path).matchHeader('X-Auth-User', mockOptions.user).matchHeader('X-Auth-Key', mockOptions.key).reply(204, 'No Content', {
 			'x-storage-url' : mockOptions.storage,
 			'x-cdn-management-url' : mockOptions.cdn,
 			'x-auth-token' : mockOptions.token
@@ -36,8 +36,8 @@ var superNock = {
 		return this;
 	},
 	tempURL : function() {
-		var storage = url.parse(mockOptions.storage);
-		var scope = nock(storage.href).get(storage.path).matchHeader('X-Account-Meta-Temp-Url-Key', mockOptions.tempURLKey).reply(204, 'No Content');
+		var path = url.parse(mockOptions.storage).pathname;
+		var scope = nock(mockOptions.storage).post(path).matchHeader('X-Account-Meta-Temp-Url-Key', mockOptions.tempURLKey).reply(204, 'No Content');
 
 		this.aScopes.push(scope);
 		return this;
@@ -58,8 +58,8 @@ var superNock = {
 			bytes : 12
 		}];
 
-		var storage = url.parse(mockOptions.storage);
-		var scope = nock(storage.href).get(storage.path + '?format=json').matchHeader('X-Auth-Token', mockOptions.token).reply(200, JSON.stringify(aContainers));
+		var path = url.parse(mockOptions.storage).pathname + '?format=json';
+		var scope = nock(mockOptions.storage).get(path).matchHeader('X-Auth-Token', mockOptions.token).reply(200, JSON.stringify(aContainers));
 
 		this.aScopes.push(scope);
 		return this;
@@ -83,8 +83,8 @@ var superNock = {
 			cdn_streaming_uri : 'https://c2.r2.stream.cf1.rackcdn.com'
 		}];
 
-		var cdn = url.parse(mockOptions.cdn);
-		var scope = nock(cdn.href).get(cdn.path + '?format=json').matchHeader('X-Auth-Token', mockOptions.token).reply(200, JSON.stringify(aContainers));
+		var path = url.parse(mockOptions.cdn).pathname + '?format=json';
+		var scope = nock(mockOptions.cdn).get(path).matchHeader('X-Auth-Token', mockOptions.token).reply(200, JSON.stringify(aContainers));
 
 		this.aScopes.push(scope);
 		return this;
@@ -133,8 +133,8 @@ describe('Rackit', function() {
 		});
 		it('should return an error when bad credentials are given', function(cb) {
 			// Setup nock to respond to bad auth request
-			var uri = url.parse(clientOptions.baseURI);
-			var scope = nock(uri.href).get(uri.path).reply(401, 'Unauthorized');
+			var path = url.parse(clientOptions.baseURI).pathname;
+			var scope = nock(clientOptions.baseURI).get(path).reply(401, 'Unauthorized');
 
 			var rackit = new Rackit({
 				user : mockOptions.user + 'blahblah',
