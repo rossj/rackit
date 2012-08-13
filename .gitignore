@@ -1,5 +1,8 @@
 # Aptana Studio project file
 /.project
 
+# WebStorm project dir
+/.idea/
+
 # Node modules.. these are downloaded and installed using NPM
 /node_modules/
