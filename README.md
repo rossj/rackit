@@ -22,9 +22,12 @@ For security, privacy, and ease, Rackit stores files on the cloud with random na
         'key' : '<your Rackspace API key>'
     }, function(err) {
         // Add a local file to the cloud
-        rackit.add(__dirname + '/image.jpg', function(err, cloudPath) {
+        rackit.add(__dirname + '/image.jpg', function(err, cloudpath) {
             // Get the CDN URI of the file
-            console.log(rackit.getURI(cloudPath));
+            console.log(rackit.getURI(cloudpath));
+
+            // The cloudpath parameter uniquely identifies this file, and is used by other Rackit methods to manipulate it.
+            // We should probably store the cloudpath somewhere.
         });
     });
 
@@ -38,9 +41,9 @@ Optionally, you may create your own Rackit instance. This is necessary if you ar
     
     myRackit.init(function(err) {
         // Add a local file to the cloud
-        myRackit.add(__dirname + '/image.jpg', function(err, cloudPath) {
+        myRackit.add(__dirname + '/image.jpg', function(err, cloudpath) {
             // Get the CDN URI of the file
-            console.log(myRackit.getURI(cloudPath));
+            console.log(myRackit.getURI(cloudpath));
         });
     });
     
@@ -56,7 +59,7 @@ When initializing Rackit, here are the options and defaults:
 		tempURLKey : null, // A secret for generating temporary URLs
 		useSNET : false,
 		useCDN : true,
-		useSSL : true,
+		useSSL : true, // Specifies whether to use SSL (https) for CDN links
 		verbose : false, // If set to true, log messages will be generated
 		logger : console.log // Function to receive log messages
     }
@@ -70,28 +73,32 @@ When initializing Rackit, here are the options and defaults:
   - filename - What to name the file on Cloud Files. Omit to have Rackit generate a UID.
   - meta - A hash of additional metadata to store along with the file.
   - headers - A hash of additional headers to send.
-- callback(err, cloudPath) - returns information about the location of the file. In the form 'container/file-name' to be used as input to other methods.
+- callback(err, cloudpath) - returns information about the location of the file. `cloudpath` is in the form 'container/file-name' and is used as input to other methods to uniquely identify a file. I recommend storing the `cloudpath` in your database, although you could also store a CDN url.
 
 Uploads a file to the cloud. The uploaded file will be given a random 24-character file name.
 
-### #get(cloudPath, localPath, callback)
-- cloudPath - of the form 'container/file-name'
+### #get(cloudpath, localPath, callback)
+- cloudpath - of the form 'container/file-name'
 - localPath - where to put the downloaded file
 - callback(err)
 
 Downloads a file from the cloud.
 
-### #remove(cloudPath, callback)
+### #remove(cloudpath, callback)
 
 Permanently deletes a file from the cloud.
 
-### #setMeta(cloudPath, meta, callback)
+### #setMeta(cloudpath, meta, callback)
 
 Upserts the metadata for the specified cloud file.
 
-### #getURI(cloudPath [, ttl])
+### #getURI(cloudpath [, ttl])
 
 Returns a URI for a given file. If the ttl parameter is omitted, then a CDN URI will be returned (if the container is CDN enabled). If ttl is specified, a temporary URI will be given which is valid for ttl seconds.
+
+### #getCloudpath(uri)
+
+Opposite of getURI. Returns a Cloudpath string given a file's CDN or temporary URI. The Cloudpath can then be used as input to other Rackit methods.
 
 # TODO
 
