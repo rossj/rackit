@@ -92,6 +92,12 @@ Permanently deletes a file from the cloud.
 
 Upserts the metadata for the specified cloud file.
 
+### #getMeta(cloudpath, callback)
+- cloudpath - of the form 'container/file-name'
+- callback(err, meta)
+
+Retrieves the metadata for the specified cloud file. An error will be returned if the file does not exist.
+
 ### #getURI(cloudpath [, ttl])
 
 Returns a URI for a given file. If the ttl parameter is omitted, then a CDN URI will be returned (if the container is CDN enabled). If ttl is specified, a temporary URI will be given which is valid for ttl seconds.
