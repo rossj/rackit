@@ -407,6 +407,89 @@ describe('Rackit', function () {
 			});
 		});
 
+		describe('automatic container creation - concurrent operations', function (cb) {
+			it('parallel operations should produce one new container when none exist', function (cb) {
+				var prefix = 'new';
+				var container = prefix + '0';
+
+				rackit.options.prefix = prefix;
+				rackit.options.useCDN = false;
+
+				// Assert that the container does not exist
+				rackit.hContainers.should.not.have.property(container);
+
+				// Setup the nock with two add operations
+				superNock.createContainer(container).createContainer(container).add(container).add(container);
+
+				// Upload two files in parallel
+				async.parallel({
+					one : function (cb) {
+						rackit.add(filepath, cb);
+					},
+					two : function (cb) {
+						rackit.add(filepath, cb);
+					}
+				}, function (err, cloudpaths) {
+					superNock.allDone();
+					should.not.exist(err);
+					should.exist(cloudpaths.one);
+					should.exist(cloudpaths.two);
+
+					// Assert the container was created
+					rackit.hContainers.should.have.property(container);
+
+					// Assert the container count
+					rackit.hContainers[container].count.should.equal(2);
+
+					// Assert the file was added to the expected container
+					cloudpaths.one.split('/')[0].should.equal(container);
+					cloudpaths.two.split('/')[0].should.equal(container);
+
+					cb();
+				});
+			});
+
+			it('parallel operations should produce one new container when existing are full', function (cb) {
+				var prefix = 'full';
+				var container = prefix + '1';
+
+				rackit.options.prefix = prefix;
+				rackit.options.useCDN = false;
+
+				// Assert that the container does not exist
+				rackit.hContainers.should.not.have.property(container);
+
+				// Setup the nock with two add operations
+				superNock.createContainer(container).createContainer(container).add(container).add(container);
+
+				// Upload two files in parallel
+				async.parallel({
+					one : function (cb) {
+						rackit.add(filepath, cb);
+					},
+					two : function (cb) {
+						rackit.add(filepath, cb);
+					}
+				}, function (err, cloudpaths) {
+					superNock.allDone();
+					should.not.exist(err);
+					should.exist(cloudpaths.one);
+					should.exist(cloudpaths.two);
+
+					// Assert the container was created
+					rackit.hContainers.should.have.property(container);
+
+					// Assert the container count
+					rackit.hContainers[container].count.should.equal(2);
+
+					// Assert the file was added to the expected container
+					cloudpaths.one.split('/')[0].should.equal(container);
+					cloudpaths.two.split('/')[0].should.equal(container);
+
+					cb();
+				});
+			});
+		});
 	});
 
 	describe('#getCloudpath', function () {
