@@ -2,7 +2,7 @@
 	"name": "rackit",
 	"description": "Super simple Rackspace Cloud Files client",
 	"keywords": ["api", "storage", "rackspace", "cloud", "cloudfiles"],
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"author": "Ross Johnson <ross@mazira.com>",
 	"contributors": [],
 	"repository": {
