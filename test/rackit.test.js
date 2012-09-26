@@ -75,9 +75,9 @@ var superNock = {
 				bytes : 12
 			},
 			{
-				name : 'two',
-				count : 3,
-				bytes : 12
+				name : 'full0',
+				count : 50000,
+				bytes : 12000
 			},
 			{
 				name : 'exists0',
@@ -104,7 +104,7 @@ var superNock = {
 				cdn_streaming_uri : 'https://c1.r2.stream.cf1.rackcdn.com'
 			},
 			{
-				name : 'two',
+				name : 'full0',
 				cdn_enabled : true,
 				ttl : 28800,
 				log_retention : false,
@@ -248,11 +248,11 @@ describe('Rackit', function () {
 
 				rackit.aContainers.should.have.length(3);
 				rackit.hContainers.should.have.ownProperty('one');
-				rackit.hContainers.should.have.ownProperty('two');
+				rackit.hContainers.should.have.ownProperty('full0');
 				rackit.hContainers.should.have.ownProperty('exists0');
 				rackit.aCDNContainers.should.have.length(2);
 				rackit.hCDNContainers.should.have.ownProperty('one');
-				rackit.hCDNContainers.should.have.ownProperty('two');
+				rackit.hCDNContainers.should.have.ownProperty('full0');
 
 				superNock.allDone();
 				cb();
@@ -263,6 +263,27 @@ describe('Rackit', function () {
 
 	describe('#add', function () {
 		var rackit;
+
+		// Asserts that a successful file upload occured.
+		function assertAdd(container, count, cb) {
+			return function (err, cloudpath) {
+				superNock.allDone();
+				should.not.exist(err);
+				should.exist(cloudpath);
+
+				// Assert the container exists
+				rackit.hContainers.should.have.property(container);
+
+				// Assert the file was added to the expected container
+				cloudpath.split('/')[0].should.equal(container);
+
+				// Assert the containers file count is as expected
+				rackit.hContainers[container].count.should.equal(count);
+
+				// Execute the callback for additonal asserts
+				cb && cb();
+			}
+		}
 
 		// Start off each test with a new, initialized rackit
 		beforeEach(function (cb) {
@@ -302,64 +323,90 @@ describe('Rackit', function () {
 
 			// Assert that the container exists, and is not to capacity
 			rackit.hContainers.should.have.property(container);
-			rackit.hContainers[container].count.should.be.below(50000);
+
+			var count = rackit.hContainers[container].count;
+			count.should.be.below(50000);
 
 			superNock.add(container);
-			rackit.add(filepath, function (err, cloudpath) {
-				superNock.allDone();
-				should.not.exist(err);
-				should.exist(cloudpath);
-				cb();
+			rackit.add(filepath, assertAdd(container, count + 1, cb));
+		});
+
+		describe('automatic container creation - non-CDN enabled', function () {
+			it('should create a prefixed, non-CDN container when none exist', function (cb) {
+				var prefix = 'new';
+				var container = prefix + '0';
+
+				rackit.options.prefix = prefix;
+				rackit.options.useCDN = false;
+
+				// Assert that the container does not exist
+				rackit.hContainers.should.not.have.property(container);
+
+				superNock.createContainer(container).add(container);
+				rackit.add(filepath, assertAdd(container, 1, function () {
+					// Assert the container is not CDN enabled
+					rackit.hCDNContainers.should.not.have.property(container);
+					cb();
+				}));
+			});
+
+			it('should create a prefixed, non-CDN container when existing are full', function (cb) {
+				var prefix = 'full';
+				var container = prefix + '1';
+
+				rackit.options.prefix = prefix;
+				rackit.options.useCDN = false;
+
+				// Assert that the container does not exist
+				rackit.hContainers.should.not.have.property(container);
+
+				superNock.createContainer(container).add(container);
+				rackit.add(filepath, assertAdd(container, 1, function () {
+					// Assert the container is not CDN enabled
+					rackit.hCDNContainers.should.not.have.property(container);
+					cb();
+				}));
 			});
 		});
 
-		it('should create a prefixed, non-CDN container when none exist', function (cb) {
-			var prefix = 'new';
-			var container = prefix + '0';
+		describe('automatic container creation - CDN enabled', function () {
+			it('should create a prefixed, CDN container when none exist', function (cb) {
+				var prefix = 'new';
+				var container = prefix + '0';
 
-			rackit.options.prefix = prefix;
-			rackit.options.useCDN = false;
+				rackit.options.prefix = prefix;
+				rackit.options.useCDN = true;
 
-			// Assert that the container does not exist
-			rackit.hContainers.should.not.have.property(container);
+				// Assert that the container does not exist
+				rackit.hContainers.should.not.have.property(container);
 
-			superNock.createContainer(container).add(container);
-			rackit.add(filepath, function (err, cloudpath) {
-				superNock.allDone();
-				should.not.exist(err);
-				should.exist(cloudpath);
+				superNock.createContainer(container).enableCDN(container).add(container);
+				rackit.add(filepath, assertAdd(container, 1, function () {
+					// Assert the container is CDN enabled
+					rackit.hCDNContainers.should.have.property(container);
+					cb();
+				}));
+			});
 
-				// Assert the container is not CDN enabled
-				rackit.hContainers.should.have.property(container);
-				rackit.hCDNContainers.should.not.have.property(container);
+			it('should create a prefixed, CDN container when existing are full', function (cb) {
+				var prefix = 'full';
+				var container = prefix + '1';
 
-				cb();
+				rackit.options.prefix = prefix;
+				rackit.options.useCDN = true;
+
+				// Assert that the container does not exist
+				rackit.hContainers.should.not.have.property(container);
+
+				superNock.createContainer(container).enableCDN(container).add(container);
+				rackit.add(filepath, assertAdd(container, 1, function () {
+					// Assert the container is CDN enabled
+					rackit.hCDNContainers.should.have.property(container);
+					cb();
+				}));
 			});
 		});
 
-		it('should create a prefixed, CDN container when none exist', function (cb) {
-			var prefix = 'new';
-			var container = prefix + '0';
-
-			rackit.options.prefix = prefix;
-			rackit.options.useCDN = true;
-
-			// Assert that the container does not exist
-			rackit.hContainers.should.not.have.property(container);
-
-			superNock.createContainer(container).enableCDN(container).add(container);
-			rackit.add(filepath, function (err, cloudpath) {
-				superNock.allDone();
-				should.not.exist(err);
-				should.exist(cloudpath);
-
-				// Assert the container is CDN enabled
-				rackit.hContainers.should.have.property(container);
-				rackit.hCDNContainers.should.have.property(container);
-
-				cb();
-			});
-		});
 	});
 
 	describe('#getCloudpath', function () {
@@ -401,7 +448,7 @@ describe('Rackit', function () {
 			// Turn on SSL
 			rackit.options.useSSL = true;
 
-			var cloudpath = 'two/sdf32faADf';
+			var cloudpath = 'one/sdf32faADf';
 			var uri = rackit.getURI(cloudpath);
 
 			// Ensure we are testing SSL CDN URIs
@@ -414,7 +461,7 @@ describe('Rackit', function () {
 			cloudpath2.should.equal(cloudpath);
 		});
 		it('should properly decode a temp URI', function () {
-			var cloudpath = 'two/sdf32faADf';
+			var cloudpath = 'one/sdf32faADf';
 			var uri = rackit.getURI(cloudpath, 1000);
 
 			// Ensure we are testing temp SSL URIs
