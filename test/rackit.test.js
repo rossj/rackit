@@ -1,29 +1,42 @@
 /*global require, __dirname, describe, it, before, beforeEach, after*/
+var
+// Node modules
+	url = require('url'),
+	path = require('path'),
+	fs = require('fs'),
+
+// Npm modules
+	async = require('async'),
+	should = require('should'),
+	nock = require('nock');
 
 var Rackit = require('../lib/main.js').Rackit;
-var url = require('url');
-var async = require('async');
-var should = require('should');
-var nock = require('nock');
 
 // Fake vars for our mock
 var clientOptions = Rackit.defaultOptions;
 
-var mockOptions = {
+var rackitOptions = {
 	user : 'boopity',
 	key : 'bop',
-	tempURLKey : '3522d2sa',
+	tempURLKey : '3522d2sa'
+};
+
+var mockOptions = {
 	storage : 'https://storage.blablah.com/v1/blah',
 	cdn : 'https://cdn.blablah.com/v1/blah',
 	token : 'boopitybopitydadabop'
 };
+
+// Info for the file we will upload
+var filepath = path.resolve(__dirname, 'upload.txt');
+var filedata = fs.readFileSync(filepath, 'utf8');
 
 /**
  * A simple helper object for generating sequences of mock Rackspace responses
  * @type {Object}
  */
 var superNock = {
-	aScopes : [],
+	scopes : [],
 	typicalResponse : function () {
 		return this.auth().storage().CDN();
 	},
@@ -32,25 +45,25 @@ var superNock = {
 		var path = url.parse(clientOptions.baseURI).pathname;
 		var scope = nock(clientOptions.baseURI)
 			.get(path)
-			.matchHeader('X-Auth-User', mockOptions.user)
-			.matchHeader('X-Auth-Key', mockOptions.key)
+			.matchHeader('X-Auth-User', rackitOptions.user)
+			.matchHeader('X-Auth-Key', rackitOptions.key)
 			.reply(204, 'No Content', {
 				'x-storage-url' : mockOptions.storage,
 				'x-cdn-management-url' : mockOptions.cdn,
 				'x-auth-token' : mockOptions.token
 			});
 
-		this.aScopes.push(scope);
+		this.scopes.push(scope);
 		return this;
 	},
 	tempURL : function () {
 		var path = url.parse(mockOptions.storage).pathname;
 		var scope = nock(mockOptions.storage)
 			.post(path)
-			.matchHeader('X-Account-Meta-Temp-Url-Key', mockOptions.tempURLKey)
+			.matchHeader('X-Account-Meta-Temp-Url-Key', rackitOptions.tempURLKey)
 			.reply(204, 'No Content');
 
-		this.aScopes.push(scope);
+		this.scopes.push(scope);
 		return this;
 	},
 	storage : function () {
@@ -67,7 +80,7 @@ var superNock = {
 				bytes : 12
 			},
 			{
-				name : 'three',
+				name : 'exists0',
 				count : 3,
 				bytes : 12
 			}
@@ -76,7 +89,7 @@ var superNock = {
 		var path = url.parse(mockOptions.storage).pathname + '?format=json';
 		var scope = nock(mockOptions.storage).get(path).matchHeader('X-Auth-Token', mockOptions.token).reply(200, JSON.stringify(aContainers));
 
-		this.aScopes.push(scope);
+		this.scopes.push(scope);
 		return this;
 	},
 	CDN : function () {
@@ -104,41 +117,51 @@ var superNock = {
 		var path = url.parse(mockOptions.cdn).pathname + '?format=json';
 		var scope = nock(mockOptions.cdn).get(path).matchHeader('X-Auth-Token', mockOptions.token).reply(200, JSON.stringify(aContainers));
 
-		this.aScopes.push(scope);
+		this.scopes.push(scope);
+		return this;
+	},
+	add : function (container) {
+		var path = url.parse(mockOptions.storage).pathname + '/' + container + '/filename';
+		var scope = nock(mockOptions.storage)
+			.filteringPath(new RegExp(container + '/.*', 'g'), container + '/filename')
+			.put(path, filedata)
+			.matchHeader('X-Auth-Token', mockOptions.token)
+			.reply(201);
+
+		this.scopes.push(scope);
+		return this;
+	},
+	createContainer : function (container) {
+		var path = url.parse(mockOptions.storage).pathname + '/' + container;
+		var scope = nock(mockOptions.storage)
+			.put(path)
+			.matchHeader('X-Auth-Token', mockOptions.token)
+			.reply(201);
+
+		this.scopes.push(scope);
+		return this;
+	},
+	enableCDN : function (container) {
+		var path = url.parse(mockOptions.cdn).pathname + '/' + container;
+		var scope = nock(mockOptions.cdn)
+			.put(path)
+			.matchHeader('X-Auth-Token', mockOptions.token)
+			.reply(201);
+
+		this.scopes.push(scope);
 		return this;
 	},
 	allDone : function () {
 		// Assert that all the scopes are done
-		for (var i = 0; i < this.aScopes.length; i++) {
-			this.aScopes[i].done();
+		for ( var i = 0; i < this.scopes.length; i++ ) {
+			this.scopes[i].done();
 		}
 		// Clear all scopes
-		this.aScopes = [];
+		this.scopes = [];
 	}
 };
 
 describe('Rackit', function () {
-
-	/**
-	 * Initializes a Rackit instance using nocks
-	 * @param {function(Error)} cb
-	 * @return {Rackit}
-	 */
-	var nockRackitInit = function (cb) {
-		superNock.typicalResponse().tempURL();
-		var rackit = new Rackit({
-			user : mockOptions.user,
-			key : mockOptions.key,
-			tempURLKey : mockOptions.tempURLKey
-		});
-		rackit.init(function (err) {
-			superNock.allDone();
-			cb(err);
-		});
-
-		return rackit;
-	}
-
 	describe('Constructor', function () {
 		it('should have default options', function () {
 			var rackit = new Rackit();
@@ -176,8 +199,8 @@ describe('Rackit', function () {
 			var scope = nock(clientOptions.baseURI).get(path).reply(401, 'Unauthorized');
 
 			var rackit = new Rackit({
-				user : mockOptions.user + 'blahblah',
-				key : mockOptions.key + 'bloopidy'
+				user : rackitOptions.user + 'blahblah',
+				key : rackitOptions.key + 'bloopidy'
 			});
 			rackit.init(function (err) {
 				should.exist(err);
@@ -190,8 +213,8 @@ describe('Rackit', function () {
 			superNock.typicalResponse();
 
 			var rackit = new Rackit({
-				user : mockOptions.user,
-				key : mockOptions.key,
+				user : rackitOptions.user,
+				key : rackitOptions.key
 			});
 			rackit.init(function (err) {
 				should.not.exist(err);
@@ -203,9 +226,9 @@ describe('Rackit', function () {
 			superNock.typicalResponse().tempURL();
 
 			var rackit = new Rackit({
-				user : mockOptions.user,
-				key : mockOptions.key,
-				tempURLKey : mockOptions.tempURLKey
+				user : rackitOptions.user,
+				key : rackitOptions.key,
+				tempURLKey : rackitOptions.tempURLKey
 			});
 			rackit.init(function (err) {
 				should.not.exist(err);
@@ -217,8 +240,8 @@ describe('Rackit', function () {
 			superNock.typicalResponse();
 
 			var rackit = new Rackit({
-				user : mockOptions.user,
-				key : mockOptions.key,
+				user : rackitOptions.user,
+				key : rackitOptions.key
 			});
 			rackit.init(function (err) {
 				should.not.exist(err);
@@ -226,7 +249,7 @@ describe('Rackit', function () {
 				rackit.aContainers.should.have.length(3);
 				rackit.hContainers.should.have.ownProperty('one');
 				rackit.hContainers.should.have.ownProperty('two');
-				rackit.hContainers.should.have.ownProperty('three');
+				rackit.hContainers.should.have.ownProperty('exists0');
 				rackit.aCDNContainers.should.have.length(2);
 				rackit.hCDNContainers.should.have.ownProperty('one');
 				rackit.hCDNContainers.should.have.ownProperty('two');
@@ -241,15 +264,99 @@ describe('Rackit', function () {
 	describe('#add', function () {
 		var rackit;
 
-		before(function (cb) {
-			rackit = nockRackitInit(cb);
+		// Start off each test with a new, initialized rackit
+		beforeEach(function (cb) {
+			superNock.typicalResponse().tempURL();
+			rackit = new Rackit({
+				user : rackitOptions.user,
+				key : rackitOptions.key,
+				tempURLKey : rackitOptions.tempURLKey
+			});
+			rackit.init(function (err) {
+				superNock.allDone();
+				cb(err);
+			});
 		});
 
 		it('should return an error if the file does not exist', function (cb) {
-			rackit.add(__dirname + '/blah.jpg', function (err, cloudPath) {
+			var filepath = path.resolve(__dirname, 'fakefile.txt');
+
+			// Assert the file doesn't exist
+			fs.stat(filepath, function (err, stats) {
 				should.exist(err);
-				err.should.be.an['instanceof'](Error);
-				should.not.exist(cloudPath);
+
+				rackit.add(filepath, function (err, cloudpath) {
+					should.exist(err);
+					err.should.be.an['instanceof'](Error);
+					should.not.exist(cloudpath);
+					cb();
+				});
+			});
+		});
+
+		it('should upload a file to existing, non-full container', function (cb) {
+			var prefix = 'exists';
+			var container = prefix + '0';
+
+			rackit.options.prefix = prefix;
+
+			// Assert that the container exists, and is not to capacity
+			rackit.hContainers.should.have.property(container);
+			rackit.hContainers[container].count.should.be.below(50000);
+
+			superNock.add(container);
+			rackit.add(filepath, function (err, cloudpath) {
+				superNock.allDone();
+				should.not.exist(err);
+				should.exist(cloudpath);
+				cb();
+			});
+		});
+
+		it('should create a prefixed, non-CDN container when none exist', function (cb) {
+			var prefix = 'new';
+			var container = prefix + '0';
+
+			rackit.options.prefix = prefix;
+			rackit.options.useCDN = false;
+
+			// Assert that the container does not exist
+			rackit.hContainers.should.not.have.property(container);
+
+			superNock.createContainer(container).add(container);
+			rackit.add(filepath, function (err, cloudpath) {
+				superNock.allDone();
+				should.not.exist(err);
+				should.exist(cloudpath);
+
+				// Assert the container is not CDN enabled
+				rackit.hContainers.should.have.property(container);
+				rackit.hCDNContainers.should.not.have.property(container);
+
+				cb();
+			});
+		});
+
+		it('should create a prefixed, CDN container when none exist', function (cb) {
+			var prefix = 'new';
+			var container = prefix + '0';
+
+			rackit.options.prefix = prefix;
+			rackit.options.useCDN = true;
+
+			// Assert that the container does not exist
+			rackit.hContainers.should.not.have.property(container);
+
+			superNock.createContainer(container).enableCDN(container).add(container);
+			rackit.add(filepath, function (err, cloudpath) {
+				superNock.allDone();
+				should.not.exist(err);
+				should.exist(cloudpath);
+
+				// Assert the container is CDN enabled
+				rackit.hContainers.should.have.property(container);
+				rackit.hCDNContainers.should.have.property(container);
+
 				cb();
 			});
 		});
@@ -259,9 +366,19 @@ describe('Rackit', function () {
 		var rackit;
 
 		before(function (cb) {
-			rackit = nockRackitInit(cb);
+			superNock.typicalResponse().tempURL();
+			rackit = new Rackit({
+				user : rackitOptions.user,
+				key : rackitOptions.key,
+				tempURLKey : rackitOptions.tempURLKey
+			});
+			rackit.init(function (err) {
+				superNock.allDone();
+				cb(err);
+			});
 		});
-		it('should return null when given URI from container that does not exist', function() {
+
+		it('should return null when given URI from container that does not exist', function () {
 			should.not.exist(rackit.getCloudpath('http://not.a.real.cdn.container.uri.rackcdn.com/nofile'));
 		});
 		it('should properly decode a regular CDN URI', function () {
@@ -280,7 +397,7 @@ describe('Rackit', function () {
 			should.exist(cloudpath2);
 			cloudpath2.should.equal(cloudpath);
 		});
-		it('should properly decode an SSL CDN URI', function() {
+		it('should properly decode an SSL CDN URI', function () {
 			// Turn on SSL
 			rackit.options.useSSL = true;
 
@@ -296,7 +413,7 @@ describe('Rackit', function () {
 			should.exist(cloudpath2);
 			cloudpath2.should.equal(cloudpath);
 		});
-		it('should properly decode a temp URI', function() {
+		it('should properly decode a temp URI', function () {
 			var cloudpath = 'two/sdf32faADf';
 			var uri = rackit.getURI(cloudpath, 1000);
 
