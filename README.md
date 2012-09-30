@@ -108,6 +108,7 @@ Opposite of getURI. Returns a Cloudpath string given a file's CDN or temporary U
 
 # TODO
 
+* Add periodic updating of cached container info, in case things are modified externally.
 * Finish writing test cases
 
 # LICENSE
