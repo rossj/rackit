@@ -54,8 +54,8 @@ When initializing Rackit, here are the options and defaults:
     {
         user : '', // Your Rackspace username
 		key : '', // Your Rackspace API key
-		prefix : 'dev', // The prefix for your Cloud Files containers
-		baseURI : 'https://auth.api.rackspacecloud.com/v1.0', // The API entry point - may change based on your country
+		prefix : 'dev', // The prefix for your Cloud Files containers (may contain forward slash)
+		region : 'US', // Determines the API entry point - other option of 'UK'
 		tempURLKey : null, // A secret for generating temporary URLs
 		useSNET : false,
 		useCDN : true,
@@ -71,7 +71,7 @@ When initializing Rackit, here are the options and defaults:
 - options - A hash of additional options
   - type - A MIME type (e.g. 'Image/JPEG'). If not specified, mime-magic is used.
   - filename - What to name the file on Cloud Files. Omit to have Rackit generate a UID.
-  - meta - A hash of additional metadata to store along with the file.
+  - meta - A hash of additional metadata to store along with the file (prefixed with 'X-Object-Meta-' automatically).
   - headers - A hash of additional headers to send.
 - callback(err, cloudpath) - returns information about the location of the file. `cloudpath` is in the form 'container/file-name' and is used as input to other methods to uniquely identify a file. I recommend storing the `cloudpath` in your database, although you could also store a CDN url.
 
@@ -80,7 +80,7 @@ Uploads a file to the cloud. The uploaded file will be given a random 24-charact
 ### #get(cloudpath, localPath, callback)
 - cloudpath - of the form 'container/file-name'
 - localPath - where to put the downloaded file
-- callback(err)
+- callback(err, request)
 
 Downloads a file from the cloud.
 
@@ -108,7 +108,8 @@ Opposite of getURI. Returns a Cloudpath string given a file's CDN or temporary U
 
 # TODO
 
-* Add periodic updating of cached container info, in case things are modified externally.
+* Add periodic updating of cached container info, in case things are modified externally
+* Add ability to specify container size limit
 * Finish writing test cases
 
 # LICENSE
