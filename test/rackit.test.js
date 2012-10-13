@@ -42,8 +42,8 @@ var superNock = {
 	},
 	auth : function () {
 		// Setup nock to respond to a good auth request, twice
-		var path = url.parse(clientOptions.baseURI).pathname;
-		var scope = nock(clientOptions.baseURI)
+		var path = url.parse(clientOptions.baseURIs[clientOptions.region]).pathname;
+		var scope = nock(clientOptions.baseURIs[clientOptions.region])
 			.get(path)
 			.matchHeader('X-Auth-User', rackitOptions.user)
 			.matchHeader('X-Auth-Key', rackitOptions.key)
@@ -168,7 +168,9 @@ describe('Rackit', function () {
 			rackit.should.be.an['instanceof'](Rackit);
 			rackit.options.prefix.should.equal('dev');
 			rackit.options.useCDN.should.equal(true);
-			rackit.options.baseURI.should.equal('https://auth.api.rackspacecloud.com/v1.0');
+			rackit.options.region.should.equal('US');
+			rackit.options.baseURIs[clientOptions.region].should.equal('https://auth.api.rackspacecloud.com/v1.0');
+			rackit.options.baseURIs['UK'].should.equal('https://lon.auth.api.rackspacecloud.com/v1.0');
 		});
 		it('should allow overriding of default options', function () {
 			var rackit = new Rackit({
@@ -178,7 +180,7 @@ describe('Rackit', function () {
 			rackit.options.pre.should.equal('dep');
 			rackit.options.useCDN.should.equal(false);
 			// Check non-overridden options are still there
-			rackit.options.baseURI.should.equal('https://auth.api.rackspacecloud.com/v1.0');
+			rackit.options.region.should.equal('US');
 		});
 	});
 
@@ -195,8 +197,8 @@ describe('Rackit', function () {
 		});
 		it('should return an error when bad credentials are given', function (cb) {
 			// Setup nock to respond to bad auth request
-			var path = url.parse(clientOptions.baseURI).pathname;
-			var scope = nock(clientOptions.baseURI).get(path).reply(401, 'Unauthorized');
+			var path = url.parse(clientOptions.baseURIs[clientOptions.region]).pathname;
+			var scope = nock(clientOptions.baseURIs[clientOptions.region]).get(path).reply(401, 'Unauthorized');
 
 			var rackit = new Rackit({
 				user : rackitOptions.user + 'blahblah',
