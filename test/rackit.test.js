@@ -4,11 +4,13 @@ var
 	url = require('url'),
 	path = require('path'),
 	fs = require('fs'),
+	http = require('http'),
 
 // Npm modules
 	async = require('async'),
 	should = require('should'),
-	nock = require('nock');
+	nock = require('nock'),
+	request = require('request');
 
 var Rackit = require('../lib/main.js').Rackit;
 
@@ -28,8 +30,11 @@ var mockOptions = {
 };
 
 // Info for the file we will upload
-var filepath = path.resolve(__dirname, 'upload.txt');
-var filedata = fs.readFileSync(filepath, 'utf8');
+var testFile = {
+	path : path.resolve(__dirname, 'upload.txt'),
+	type : 'text/plain'
+};
+testFile.data = fs.readFileSync(testFile.path, 'utf8');
 
 /**
  * A simple helper object for generating sequences of mock Rackspace responses
@@ -120,13 +125,21 @@ var superNock = {
 		this.scopes.push(scope);
 		return this;
 	},
-	add : function (container) {
+	add : function (container, data, type, chunked) {
 		var path = url.parse(mockOptions.storage).pathname + '/' + container + '/filename';
 		var scope = nock(mockOptions.storage)
 			.filteringPath(new RegExp(container + '/.*', 'g'), container + '/filename')
-			.put(path, filedata)
+			.put(path, data)
 			.matchHeader('X-Auth-Token', mockOptions.token)
-			.reply(201);
+			.matchHeader('Content-Type', type);
+
+		if (chunked) {
+			//scope.matchHeader('Transfer-Encoding', 'chunked');
+		} else {
+			//scope.matchHeader('Content-Length', Buffer.byteLength(data));
+		}
+
+		scope = scope.reply(201);
 
 		this.scopes.push(scope);
 		return this;
@@ -195,6 +208,7 @@ describe('Rackit', function () {
 				cb();
 			});
 		});
+
 		it('should return an error when bad credentials are given', function (cb) {
 			// Setup nock to respond to bad auth request
 			var path = url.parse(clientOptions.baseURIs[clientOptions.region]).pathname;
@@ -211,6 +225,7 @@ describe('Rackit', function () {
 				cb();
 			});
 		});
+
 		it('should not return an error with good credentials', function (cb) {
 			superNock.typicalResponse();
 
@@ -224,6 +239,7 @@ describe('Rackit', function () {
 				cb();
 			});
 		});
+
 		it('should set temp url key if provided', function (cb) {
 			superNock.typicalResponse().tempURL();
 
@@ -238,6 +254,7 @@ describe('Rackit', function () {
 				cb();
 			});
 		});
+
 		it('should get container info and cache it', function (cb) {
 			superNock.typicalResponse();
 
@@ -266,9 +283,30 @@ describe('Rackit', function () {
 	describe('#add', function () {
 		var rackit;
 
+		// This function does some setup and checks for tests which are not intended to test automatic container creation.
+		// It sets the container prefix for the Rackit instance, and asserts that the container is not full.
+		// The return value is the current size of the container.
+		function getFreeContainerCount(container) {
+			// Get the prefix
+			var prefix = container.replace(/\d+$/, '');
+
+			rackit.options.prefix = prefix;
+
+			// Assert that the container exists, and is not to capacity
+			rackit.hContainers.should.have.property(container);
+
+			var count = rackit.hContainers[container].count;
+			count.should.be.below(50000);
+			return count;
+		}
+
 		// Asserts that a successful file upload occured.
 		function assertAdd(container, count, cb) {
 			return function (err, cloudpath) {
+				if (err) {
+					console.log(err);
+				}
+
 				superNock.allDone();
 				should.not.exist(err);
 				should.exist(cloudpath);
@@ -301,39 +339,128 @@ describe('Rackit', function () {
 			});
 		});
 
-		it('should return an error if the file does not exist', function (cb) {
-			var filepath = path.resolve(__dirname, 'fakefile.txt');
+		describe('local file upload (string param)', function() {
 
-			// Assert the file doesn't exist
-			fs.stat(filepath, function (err, stats) {
-				should.exist(err);
+			it('should return an error if the file does not exist', function (cb) {
+				var filepath = path.resolve(__dirname, 'fakefile.txt');
 
-				rackit.add(filepath, function (err, cloudpath) {
+				// Assert the file doesn't exist
+				fs.stat(filepath, function (err, stats) {
+					should.exist(err);
+
+					rackit.add(filepath, function (err, cloudpath) {
+						should.exist(err);
+						err.should.be.an['instanceof'](Error);
+						should.not.exist(cloudpath);
+						cb();
+					});
+				});
+			});
+
+			it('should successfuly upload a file (to existing, non-full container)', function (cb) {
+				var container = 'exists0';
+				var count = getFreeContainerCount(container);
+
+				// Perform the actual test
+				superNock.add(container, testFile.data, testFile.type);
+				rackit.add(testFile.path, assertAdd(container, count + 1, cb));
+			});
+
+			it('should allow overriding of the content-type', function (cb) {
+				var container = 'exists0';
+				var count = getFreeContainerCount(container);
+
+				var type = 'text/mytype';
+				superNock.add(container, testFile.data, type);
+				rackit.add(testFile.path, { type: type }, assertAdd(container, count + 1, cb));
+			});
+
+		});
+
+		describe('streaming upload (ReadableStream param)', function() {
+
+			it('should return an error if the stream is not readable', function (cb) {
+				var stream = fs.createReadStream(testFile.path);
+				stream.destroy();
+
+				rackit.add(stream, function (err, cloudpath) {
 					should.exist(err);
 					err.should.be.an['instanceof'](Error);
 					should.not.exist(cloudpath);
 					cb();
 				});
 			});
-		});
 
-		it('should upload a file to existing, non-full container', function (cb) {
-			var prefix = 'exists';
-			var container = prefix + '0';
+			it('should return an error if no type is specified (and no content-type header)', function(cb) {
+				var stream = fs.createReadStream(testFile.path);
+				rackit.add(stream, function (err, cloudpath) {
+					should.exist(err);
+					err.should.be.an['instanceof'](Error);
+					should.not.exist(cloudpath);
+					cb();
+				});
+			});
 
-			rackit.options.prefix = prefix;
+			it('should successfuly upload a file stream with explicit type', function (cb) {
+				var container = 'exists0';
+				var count = getFreeContainerCount(container);
 
-			// Assert that the container exists, and is not to capacity
-			rackit.hContainers.should.have.property(container);
+				var stream = fs.createReadStream(testFile.path);
+				superNock.add(container, testFile.data, testFile.type, true);
+				rackit.add(fs.createReadStream(testFile.path), {type: testFile.type}, assertAdd(container, count + 1, cb));
+			});
 
-			var count = rackit.hContainers[container].count;
-			count.should.be.below(50000);
+			it('should successfuly upload a ServerRequest stream with forwarded type', function (cb) {
+				var container = 'exists0';
+				var count = getFreeContainerCount(container);
 
-			superNock.add(container);
-			rackit.add(filepath, assertAdd(container, count + 1, cb));
+				superNock.add(container, testFile.data, testFile.type, true);
+
+				// Set up the small server that will forward the request to Rackit
+				var server = http.createServer(function(req, res) {
+					rackit.add(req, assertAdd(container, count + 1, cb));
+					server.close();
+				}).listen(7357);
+
+				// Create the request to the small server above
+				var req = request.put({
+					uri : 'http://localhost:7357',
+					headers: {
+						'content-type': 'text/plain'
+					}
+				});
+
+				fs.createReadStream(testFile.path).pipe(req);
+			});
+
+			it('should successfuly upload a ServerRequest stream with explicit type', function (cb) {
+				var container = 'exists0';
+				var count = getFreeContainerCount(container);
+				var type = 'text/pdf';
+
+				superNock.add(container, testFile.data, type, true);
+
+				// Set up the small server that will forward the request to Rackit
+				var server = http.createServer(function(req, res) {
+					rackit.add(req, {type : type}, assertAdd(container, count + 1, cb));
+					server.close();
+				}).listen(7357);
+
+				// Create the request to the small server above
+				var req = request.put({
+					uri : 'http://localhost:7357',
+					headers: {
+						'content-type': 'text/plain'
+					}
+				});
+
+				fs.createReadStream(testFile.path).pipe(req);
+			});
+
 		});
 
 		describe('automatic container creation - non-CDN enabled', function () {
+
 			it('should create a prefixed, non-CDN container when none exist', function (cb) {
 				var prefix = 'new';
 				var container = prefix + '0';
@@ -344,8 +471,12 @@ describe('Rackit', function () {
 				// Assert that the container does not exist
 				rackit.hContainers.should.not.have.property(container);
 
-				superNock.createContainer(container).add(container);
-				rackit.add(filepath, assertAdd(container, 1, function () {
+				// Add on the mock for the add request
+				superNock
+					.createContainer(container)
+					.add(container, testFile.data, testFile.type);
+
+				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is not CDN enabled
 					rackit.hCDNContainers.should.not.have.property(container);
 					cb();
@@ -362,16 +493,22 @@ describe('Rackit', function () {
 				// Assert that the container does not exist
 				rackit.hContainers.should.not.have.property(container);
 
-				superNock.createContainer(container).add(container);
-				rackit.add(filepath, assertAdd(container, 1, function () {
+				// Add on the mock for the add request
+				superNock
+					.createContainer(container)
+					.add(container, testFile.data, testFile.type);
+
+				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is not CDN enabled
 					rackit.hCDNContainers.should.not.have.property(container);
 					cb();
 				}));
 			});
+
 		});
 
 		describe('automatic container creation - CDN enabled', function () {
+
 			it('should create a prefixed, CDN container when none exist', function (cb) {
 				var prefix = 'new';
 				var container = prefix + '0';
@@ -382,8 +519,13 @@ describe('Rackit', function () {
 				// Assert that the container does not exist
 				rackit.hContainers.should.not.have.property(container);
 
-				superNock.createContainer(container).enableCDN(container).add(container);
-				rackit.add(filepath, assertAdd(container, 1, function () {
+				// Add on the mock for the add request
+				superNock
+					.createContainer(container)
+					.enableCDN(container)
+					.add(container, testFile.data, testFile.type);
+
+				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is CDN enabled
 					rackit.hCDNContainers.should.have.property(container);
 					cb();
@@ -400,8 +542,13 @@ describe('Rackit', function () {
 				// Assert that the container does not exist
 				rackit.hContainers.should.not.have.property(container);
 
-				superNock.createContainer(container).enableCDN(container).add(container);
-				rackit.add(filepath, assertAdd(container, 1, function () {
+				// Add on the mock for the add request
+				superNock
+					.createContainer(container)
+					.enableCDN(container)
+					.add(container, testFile.data, testFile.type);
+
+				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is CDN enabled
 					rackit.hCDNContainers.should.have.property(container);
 					cb();
@@ -410,6 +557,7 @@ describe('Rackit', function () {
 		});
 
 		describe('automatic container creation - concurrent operations', function (cb) {
+
 			it('parallel operations should produce one new container when none exist', function (cb) {
 				var prefix = 'new';
 				var container = prefix + '0';
@@ -421,15 +569,19 @@ describe('Rackit', function () {
 				rackit.hContainers.should.not.have.property(container);
 
 				// Setup the nock with two add operations
-				superNock.createContainer(container).createContainer(container).add(container).add(container);
+				superNock
+					.createContainer(container)
+					.createContainer(container)
+					.add(container, testFile.data, testFile.type)
+					.add(container, testFile.data, testFile.type);
 
 				// Upload two files in parallel
 				async.parallel({
 					one : function (cb) {
-						rackit.add(filepath, cb);
+						rackit.add(testFile.path, cb);
 					},
 					two : function (cb) {
-						rackit.add(filepath, cb);
+						rackit.add(testFile.path, cb);
 					}
 				}, function (err, cloudpaths) {
 					superNock.allDone();
@@ -462,15 +614,19 @@ describe('Rackit', function () {
 				rackit.hContainers.should.not.have.property(container);
 
 				// Setup the nock with two add operations
-				superNock.createContainer(container).createContainer(container).add(container).add(container);
+				superNock
+					.createContainer(container)
+					.createContainer(container)
+					.add(container, testFile.data, testFile.type)
+					.add(container, testFile.data, testFile.type);
 
 				// Upload two files in parallel
 				async.parallel({
 					one : function (cb) {
-						rackit.add(filepath, cb);
+						rackit.add(testFile.path, cb);
 					},
 					two : function (cb) {
-						rackit.add(filepath, cb);
+						rackit.add(testFile.path, cb);
 					}
 				}, function (err, cloudpaths) {
 					superNock.allDone();
@@ -513,6 +669,7 @@ describe('Rackit', function () {
 		it('should return null when given URI from container that does not exist', function () {
 			should.not.exist(rackit.getCloudpath('http://not.a.real.cdn.container.uri.rackcdn.com/nofile'));
 		});
+
 		it('should properly decode a regular CDN URI', function () {
 			// Turn off SSL
 			rackit.options.useSSL = false;
@@ -529,6 +686,7 @@ describe('Rackit', function () {
 			should.exist(cloudpath2);
 			cloudpath2.should.equal(cloudpath);
 		});
+
 		it('should properly decode an SSL CDN URI', function () {
 			// Turn on SSL
 			rackit.options.useSSL = true;
@@ -545,6 +703,7 @@ describe('Rackit', function () {
 			should.exist(cloudpath2);
 			cloudpath2.should.equal(cloudpath);
 		});
+
 		it('should properly decode a temp URI', function () {
 			var cloudpath = 'one/sdf32faADf';
 			var uri = rackit.getURI(cloudpath, 1000);
@@ -558,5 +717,6 @@ describe('Rackit', function () {
 			should.exist(cloudpath2);
 			cloudpath2.should.equal(cloudpath);
 		});
+
 	});
 });
