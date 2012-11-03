@@ -78,7 +78,7 @@ Uploads a file to the cloud. The uploaded file will be given a random 24-charact
 ### #get(cloudpath, localPath, callback)
 - cloudpath - of the form 'container/file-name'
 - localPath - where to put the downloaded file
-- callback(err, request)
+- callback(err, response, body)
 
 Downloads a file from the cloud.
 
