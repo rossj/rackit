@@ -1,12 +1,10 @@
 # Rackit
 
-Rackit is a module for managing large collections of files on Rackspace Cloud Files. Rackit automatically creates containers as needed, and will seamlessly reauthenticate if your API key expires. Rackit also supports the generation of temporary, time-limited file URLs.
+Rackit is a module for managing large collections of files on Rackspace Cloud Files. Rackit automatically creates containers as needed, and reauthenticates when the API token expires. Rackit also supports the generation of temporary, time-limited file URLs.
 
 Cloud Files has a recommended limit of 50,000 files per container. Rackit knows this, and will automatically create new containers as necessary.
 
-With Rackit, you specify a container prefix, such as 'file'. Then, Rackit will create containers ['file0', 'file1', ...] as necessary.
-
-For security, privacy, and ease, Rackit stores files on the cloud with random names, which it returns to you.
+With Rackit, you specify a container prefix, such as 'file'. Then, Rackit will create containers ['file0', 'file1', ...] as necessary. Files can be uploded by passing local paths or readable streams.
 
 # Install
 
@@ -52,7 +50,7 @@ Optionally, you may create your own Rackit instance. This is necessary if you ar
 When initializing Rackit, here are the options and defaults:
 
     {
-        user : '', // Your Rackspace username
+		user : '', // Your Rackspace username
 		key : '', // Your Rackspace API key
 		prefix : 'dev', // The prefix for your Cloud Files containers (may contain forward slash)
 		region : 'US', // Determines the API entry point - other option of 'UK'
@@ -66,10 +64,10 @@ When initializing Rackit, here are the options and defaults:
 
         
 # Methods
-### #add(localPath, [options,] callback)
-- localPath - A path to the file to upload
+### #add(source, [options,] callback)
+- source - Either a path to the local file to upload, or a readable stream.
 - options - A hash of additional options
-  - type - A MIME type (e.g. 'Image/JPEG'). If not specified, mime-magic is used.
+  - type - A MIME type (e.g. 'Image/JPEG'). If not specified, mime-magic is used for local files, and the Content-Type header is checked for ServerRequest streams.
   - filename - What to name the file on Cloud Files. Omit to have Rackit generate a UID.
   - meta - A hash of additional metadata to store along with the file (prefixed with 'X-Object-Meta-' automatically).
   - headers - A hash of additional headers to send.
