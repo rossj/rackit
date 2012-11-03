@@ -75,12 +75,13 @@ When initializing Rackit, here are the options and defaults:
 
 Uploads a file to the cloud. The uploaded file will be given a random 24-character file name.
 
-### #get(cloudpath, localPath, callback)
+### #get(cloudpath, [localPath], [callback])
 - cloudpath - of the form 'container/file-name'
 - localPath - where to put the downloaded file
 - callback(err, response, body)
+- returns a readable stream
 
-Downloads a file from the cloud.
+Downloads a file from the cloud. Returns a readable stream, or can write directly to a file.
 
 ### #remove(cloudpath, callback)
 
