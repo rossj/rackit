@@ -144,6 +144,12 @@ var superNock = {
 		this.scopes.push(scope);
 		return this;
 	},
+	get : function (cloudpath, data) {
+		var path = url.parse(mockOptions.storage).pathname + '/' + cloudpath;
+		var scope = nock(mockOptions.storage)
+			.get(path)
+			.reply(200, data);
+	},
 	createContainer : function (container) {
 		var path = url.parse(mockOptions.storage).pathname + '/' + container;
 		var scope = nock(mockOptions.storage)
@@ -645,6 +651,56 @@ describe('Rackit', function () {
 					cloudpaths.two.split('/')[0].should.equal(container);
 
 					cb();
+				});
+			});
+		});
+	});
+
+	describe('#get', function () {
+		var rackit;
+
+		before(function (cb) {
+			superNock.typicalResponse();
+			rackit = new Rackit({
+				user : rackitOptions.user,
+				key : rackitOptions.key
+			});
+			rackit.init(function (err) {
+				superNock.allDone();
+				cb(err);
+			});
+		});
+
+		it('should return a readable stream', function (cb) {
+			var cloudpath = 'container/file';
+			var filepath = __dirname + '/tempfile.txt';
+			superNock.get(cloudpath, testFile.data);
+
+			// Get the file
+			var stream = rackit.get(cloudpath);
+
+			var data = '';
+			stream.on('data', function(chunk) {
+				data += chunk;
+			});
+
+			stream.on('end', function() {
+				data.should.equal(testFile.data);
+				cb();
+			});
+		});
+
+		it('should download to a file when specified', function (cb) {
+			var cloudpath = 'container/file';
+			var filepath = __dirname + '/tempfile.txt';
+			superNock.get(cloudpath, testFile.data);
+
+			// Get the file
+			rackit.get(cloudpath, filepath, function(err) {
+				// Test the data
+				fs.readFile(filepath, 'utf8', function(err, data) {
+					data.should.equal(testFile.data);
+					fs.unlink(filepath, cb);
 				});
 			});
 		});
