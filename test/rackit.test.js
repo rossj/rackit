@@ -146,6 +146,11 @@ var superNock = {
 				content_type : 'application\/octet-stream',
 				last_modified : '2012-1-01T00:00:0.0'
 			}]
+		},
+		{
+			name : 'multiplemultiple0',
+			count : 0,
+			bytes : 2000
 		}
 	],
 
@@ -178,6 +183,24 @@ var superNock = {
 			cdn_streaming_uri : 'https://c2.r2.stream.cf1.rackcdn.com'
 		}
 	],
+	// Gets an array of containers matching a prefix
+	getPrefixedContainers : function (prefix) {
+		var container, containers = [];
+		var i = this.aContainers.length;
+		var reg = new RegExp('^' + prefix + '\\d+$');
+
+		while (i--) {
+			container = this.aContainers[i];
+
+			// If the container doesn't have the prefix, skip it
+			if (!container.name.match(reg))
+				continue;
+
+			containers.push(container);
+		}
+
+		return containers;
+	},
 	CDN : function () {
 		var path = url.parse(mockOptions.cdn).pathname + '?format=json';
 		var scope = nock(mockOptions.cdn)
@@ -234,12 +257,14 @@ var superNock = {
 		return this;
 	},
 	list : function (prefix, limit) {
-		var container, basepath, path, i, count, j, objects
+		var containers = this.getPrefixedContainers(prefix);
+		var i = containers.length;
+		var container, basepath, path, count, j, objects;
 		var scope = nock(mockOptions.storage);
 
 		// There may be more than one container with this prefix, and the client will be requesting from all
-		for (i = 0; i < this.aContainers.length; i++) {
-			container = this.aContainers[i];
+		while (i--) {
+			container = containers[i];
 
 			// Skip containers that don't have the given prefix
 			if (container.name.indexOf(prefix) !== 0)
@@ -287,6 +312,7 @@ var superNock = {
 };
 
 describe('Rackit', function () {
+
 	describe('Constructor', function () {
 		it('should have default options', function () {
 			var rackit = new Rackit();
@@ -396,6 +422,67 @@ describe('Rackit', function () {
 			});
 		});
 
+	});
+
+	describe('#_getPrefixedContainers', function() {
+		var rackit;
+
+		// Start off with a new, initialized rackit
+		before(function (cb) {
+			superNock.typicalResponse();
+			rackit = new Rackit({
+				user : rackitOptions.user,
+				key : rackitOptions.key
+			});
+			rackit.init(function (err) {
+				superNock.allDone();
+				cb(err);
+			});
+		});
+
+		it('should return an empty array if no prefixed containers have been made', function() {
+			// Hack some data into Rackit
+			rackit.options.prefix = 'nonexistent';
+			rackit.aContainers = [{
+				name: 'existent'
+			}];
+
+			rackit._getPrefixedContainers().should.have.length(0);
+		});
+
+		it('should return a sorted array of prefixed containers', function() {
+			// Hack some data into Rackit
+			rackit.options.prefix = 'existent';
+			rackit.aContainers = [{
+				name: 'blah0'
+			}, {
+				name: 'existent2'
+			}, {
+				name: 'existent3'
+			}, {
+				name: 'existent0'
+			}];
+
+			rackit._getPrefixedContainers().should.eql(['existent0', 'existent2', 'existent3']);
+		});
+
+		it('should not include containers with a matching sub-prefix', function() {
+			// Hack some data into Rackit
+			rackit.options.prefix = 'existent';
+			rackit.aContainers = [{
+				name: 'blah0'
+			}, {
+				name: 'existent2'
+			}, {
+				name: 'existent3'
+			}, {
+				name: 'existent0'
+			}, {
+				name: 'existenter0'
+			}];
+
+			rackit._getPrefixedContainers().should.eql(['existent0', 'existent2', 'existent3']);
+		});
 	});
 
 	describe('#add', function () {
@@ -905,20 +992,7 @@ describe('Rackit', function () {
 			});
 		});
 
-		// Gets an array of containers for a prefix
-		function getContainers (prefix) {
-			var i, containers = [];
 
-			for (i = 0; i < superNock.aContainers.length; i++) {
-				// If the container doesn't have the prefix, skip it
-				if (superNock.aContainers[i].name.indexOf(prefix) !== 0)
-					continue;
-
-				containers.push(superNock.aContainers[i]);
-			}
-
-			return containers;
-		}
 
 		// Gets all of the object cloudpaths belonging to the given containers. This function gets the objects
 		// from the mock (the "actual" data store) for validation of what Rackit gives
@@ -973,7 +1047,7 @@ describe('Rackit', function () {
 			var prefix = 'empty';
 
 			// Assert the test conditions (no files)
-			getObjects(getContainers(prefix)).length.should.equal(0);
+			getObjects(superNock.getPrefixedContainers(prefix)).length.should.equal(0);
 
 			assertList(prefix, 10000, [], cb);
 		});
@@ -982,7 +1056,7 @@ describe('Rackit', function () {
 			var prefix = 'single';
 
 			// Assert the test conditions (one container)
-			var containers = getContainers(prefix);
+			var containers = superNock.getPrefixedContainers(prefix);
 			containers.length.should.equal(1);
 
 			// Find the actual container objects to validate
@@ -999,7 +1073,7 @@ describe('Rackit', function () {
 			var prefix = 'single';
 
 			// Assert the test conditions (one container)
-			var containers = getContainers(prefix);
+			var containers = superNock.getPrefixedContainers(prefix);
 			containers.length.should.equal(1);
 
 			// Find the actual container objects to validate
@@ -1017,7 +1091,7 @@ describe('Rackit', function () {
 			var listLimit = 1;
 
 			// Assert the test conditions (multiple containers, above limit)
-			var containers = getContainers(prefix);
+			var containers = superNock.getPrefixedContainers(prefix);
 			containers.length.should.be.above(1);
 
 			// Assert that one of the containers (first one) is above the list limit
