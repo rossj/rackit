@@ -997,7 +997,7 @@ describe('Rackit', function () {
 		// Gets all of the object cloudpaths belonging to the given containers. This function gets the objects
 		// from the mock (the "actual" data store) for validation of what Rackit gives
 		function getObjects (containers) {
-			var i, j, container, objects = [];
+			var i, j, container, object, objects = [];
 
 			// Find the actual container objects to validate
 			for (i = 0; i < containers.length; i++) {
@@ -1007,11 +1007,26 @@ describe('Rackit', function () {
 				if (!container.objects || !container.objects.length)
 					continue;
 
-				// Iterate each object in this container, adding the cloudpath to the object list
+				// Iterate each object in this container, adding the container to the object name
 				for (j = 0; j < container.objects.length; j++) {
-					objects.push(container.name + '/' + container.objects[j].name);
+					object = container.objects[j];
+					objects.push({
+						cloudpath : container.name + '/' + object.name,
+						name : object.name,
+						hash : object.hash,
+						bytes : object.bytes,
+						content_type : object.content_type,
+						last_modified : object.last_modified
+					});
 				}
 			}
+			return objects;
+		}
+
+		function getObjectCloudpaths (objects) {
+			var i = objects.length;
+			while (i--)
+				objects[i] = objects[i].cloudpath;
 
 			return objects;
 		}
@@ -1066,7 +1081,7 @@ describe('Rackit', function () {
 			// Set the list limit to be greater than this, to ensure test conditions
 			var listLimit = objects.length + 1;
 
-			assertList(prefix, listLimit, objects, cb);
+			assertList(prefix, listLimit, getObjectCloudpaths(objects), cb);
 		});
 
 		it('should return all items when there is one container (over list limit)', function (cb) {
@@ -1083,7 +1098,7 @@ describe('Rackit', function () {
 			// Set the list limit to be greater than this, to ensure test conditions
 			var listLimit = objects.length - 1;
 
-			assertList(prefix, listLimit, objects, cb);
+			assertList(prefix, listLimit, getObjectCloudpaths(objects), cb);
 		});
 
 		it('should return all items when there are multiple containers (over list limit)', function (cb) {
@@ -1100,9 +1115,45 @@ describe('Rackit', function () {
 			// Find the actual container objects to validate
 			var objects = getObjects(containers);
 
-			assertList(prefix, listLimit, objects, cb);
+			assertList(prefix, listLimit, getObjectCloudpaths(objects), cb);
 		});
 
+		it('should return extended item info when specified as option', function (cb) {
+			var prefix = 'multiple';
+			var listLimit = 1;
+
+			// Assert the test conditions (at least one container with some objects)
+			var containers = superNock.getPrefixedContainers(prefix);
+			containers.length.should.be.above(0);
+
+			// Find the actual container objects to validate
+			var objects = getObjects(containers);
+			objects.length.should.be.above(0);
+
+			// Set the test options to Rackit
+			rackit.options.prefix = prefix;
+			rackit.options.listLimit = listLimit;
+
+			// Set up the nock to respond to Rackit's requests
+			superNock.list(prefix, listLimit);
+
+			// Call Rackits list method
+			rackit.list({ extended : true }, function(err, list) {
+				superNock.allDone();
+				should.not.exist(err);
+				should.exist(list);
+
+				// Check the result length
+				list.should.have.length(objects.length);
+
+				// Check the result contents
+				for (var i = 0; i < objects.length; i++) {
+					list.should.includeEql(objects[i]);
+				}
+
+				cb();
+			});
+		});
 	});
 
 });
