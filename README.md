@@ -11,57 +11,59 @@ With Rackit, you specify a container prefix, such as 'file'. Then, Rackit will c
     $ npm install rackit
 
 # Usage
-
-    var rackit = require('rackit');
+`````javascript
+var rackit = require('rackit');
     
-    // Initialize with your account information
-    rackit.init({
-        'user' : '<your Rackspace username>',
-        'key' : '<your Rackspace API key>'
-    }, function(err) {
-        // Add a local file to the cloud
-        rackit.add(__dirname + '/image.jpg', function(err, cloudpath) {
-            // Get the CDN URI of the file
-            console.log(rackit.getURI(cloudpath));
+// Initialize with your account information
+rackit.init({
+	'user' : '<your Rackspace username>',
+	'key' : '<your Rackspace API key>'
+}, function(err) {
+	// Add a local file to the cloud
+	rackit.add(__dirname + '/image.jpg', function(err, cloudpath) {
+		// Get the CDN URI of the file
+		console.log(rackit.getURI(cloudpath));
 
-            // The cloudpath parameter uniquely identifies this file, and is used by other Rackit methods to manipulate it.
-            // We should probably store the cloudpath somewhere.
-        });
-    });
+		// The cloudpath parameter uniquely identifies this file, and is used by other Rackit methods to manipulate it.
+		// We should probably store the cloudpath somewhere.
+	});
+});
+`````
 
 Optionally, you may create your own Rackit instance. This is necessary if you are accessing multiple Cloud File accounts.
+`````javascript
+var Rackit = require('rackit').Rackit;
+var myRackit = new Rackit({
+	'user' : '<your Rackspace username>',
+	'key' : '<your Rackspace API key>'
+});
 
-    var Rackit = require('rackit').Rackit;
-    var myRackit = new Rackit({
-        'user' : '<your Rackspace username>',
-        'key' : '<your Rackspace API key>'
-    });
-    
-    myRackit.init(function(err) {
-        // Add a local file to the cloud
-        myRackit.add(__dirname + '/image.jpg', function(err, cloudpath) {
-            // Get the CDN URI of the file
-            console.log(myRackit.getURI(cloudpath));
-        });
-    });
-    
+myRackit.init(function(err) {
+	// Add a local file to the cloud
+	myRackit.add(__dirname + '/image.jpg', function(err, cloudpath) {
+		// Get the CDN URI of the file
+		console.log(myRackit.getURI(cloudpath));
+	});
+});
+`````
+
 # Options
 
 When initializing Rackit, here are the options and defaults:
-
-    {
-		user : '', // Your Rackspace username
-		key : '', // Your Rackspace API key
-		prefix : 'dev', // The prefix for your Cloud Files containers (may contain forward slash)
-		region : 'US', // Determines the API entry point - other option of 'UK'
-		tempURLKey : null, // A secret for generating temporary URLs
-		useSNET : false,
-		useCDN : true,
-		useSSL : true, // Specifies whether to use SSL (https) for CDN links
-		verbose : false, // If set to true, log messages will be generated
-		logger : console.log // Function to receive log messages
-    }
-
+`````javascript
+{
+	user : '', // Your Rackspace username
+	key : '', // Your Rackspace API key
+	prefix : 'dev', // The prefix for your Cloud Files containers (may contain forward slash)
+	region : 'US', // Determines the API entry point - other option of 'UK'
+	tempURLKey : null, // A secret for generating temporary URLs
+	useSNET : false,
+	useCDN : true,
+	useSSL : true, // Specifies whether to use SSL (https) for CDN links
+	verbose : false, // If set to true, log messages will be generated
+	logger : console.log // Function to receive log messages
+}
+`````
         
 # Methods
 ### #add(source, [options,] callback)
@@ -73,7 +75,25 @@ When initializing Rackit, here are the options and defaults:
   - headers - A hash of additional headers to send.
 - callback(err, cloudpath) - returns information about the location of the file. `cloudpath` is in the form 'container/file-name' and is used as input to other methods to uniquely identify a file. I recommend storing the `cloudpath` in your database, although you could also store a CDN url.
 
-Uploads a file to the cloud. The uploaded file will be given a random 24-character file name.
+Uploads a file to the cloud. The uploaded file will be given a random 24-character file name, unless specified.
+
+Here is an example of passing a stream to Rackit:
+`````javascript
+var http = require('http');
+http.get('http://nodejs.org/images/logo.png', function(res) {
+	// We have receieved request headers, but no data yet. Send the stream to Rackit!
+	rackit.add(res, function(err, cloudpath) {
+		if (err) return;
+		console.log('file added!');
+		console.log('see it here:', rackit.getURI(cloudpath));
+	}
+});
+`````
+
+### #list(callback)
+- callback(err, cloudpaths)
+
+Returns an array of all uploaded objects in prefixed containers.
 
 ### #get(cloudpath, [localPath], [callback])
 - cloudpath - of the form 'container/file-name'
