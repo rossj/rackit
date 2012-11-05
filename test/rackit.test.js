@@ -71,56 +71,119 @@ var superNock = {
 		this.scopes.push(scope);
 		return this;
 	},
+	aContainers : [
+		{
+			name : 'one',
+			count : 2,
+			bytes : 12
+		},
+		{
+			name : 'full0',
+			count : 50000,
+			bytes : 12000
+		},
+		{
+			name : 'empty0',
+			count : 0,
+			bytes : 12
+		},
+		{
+			name : 'single0',
+			count : 2,
+			bytes : 2000,
+			objects : [{
+				name : 'obj1',
+				hash : 'randomhash',
+				bytes : 1000,
+				content_type : 'application\/octet-stream',
+				last_modified : '2012-1-01T00:00:0.0'
+			}, {
+				name : 'obj2',
+				hash : 'randomhash',
+				bytes : 1000,
+				content_type : 'application\/octet-stream',
+				last_modified : '2012-1-01T00:00:0.0'
+			}]
+		},
+		{
+			name : 'multiple0',
+			count : 3,
+			bytes : 3000,
+			objects : [{
+				name : 'obj1',
+				hash : 'randomhash',
+				bytes : 1000,
+				content_type : 'application\/octet-stream',
+				last_modified : '2012-1-01T00:00:0.0'
+			}, {
+				name : 'obj2',
+				hash : 'randomhash',
+				bytes : 1000,
+				content_type : 'application\/octet-stream',
+				last_modified : '2012-1-01T00:00:0.0'
+			}, {
+				name : 'obj3',
+				hash : 'randomhash',
+				bytes : 1000,
+				content_type : 'application\/octet-stream',
+				last_modified : '2012-1-01T00:00:0.0'
+			}]
+		},
+		{
+			name : 'multiple1',
+			count : 2,
+			bytes : 2000,
+			objects : [{
+				name : 'obj4',
+				hash : 'randomhash',
+				bytes : 1000,
+				content_type : 'application\/octet-stream',
+				last_modified : '2012-1-01T00:00:0.0'
+			}, {
+				name : 'obj5',
+				hash : 'randomhash',
+				bytes : 1000,
+				content_type : 'application\/octet-stream',
+				last_modified : '2012-1-01T00:00:0.0'
+			}]
+		}
+	],
+
 	storage : function () {
-
-		var aContainers = [
-			{
-				name : 'one',
-				count : 2,
-				bytes : 12
-			},
-			{
-				name : 'full0',
-				count : 50000,
-				bytes : 12000
-			},
-			{
-				name : 'exists0',
-				count : 3,
-				bytes : 12
-			}
-		];
-
 		var path = url.parse(mockOptions.storage).pathname + '?format=json';
-		var scope = nock(mockOptions.storage).get(path).matchHeader('X-Auth-Token', mockOptions.token).reply(200, JSON.stringify(aContainers));
+		var scope = nock(mockOptions.storage)
+			.get(path)
+			.matchHeader('X-Auth-Token', mockOptions.token)
+			.reply(200, JSON.stringify(this.aContainers));
 
 		this.scopes.push(scope);
 		return this;
 	},
+	aCDNContainers : [{
+			name : 'one',
+			cdn_enabled : true,
+			ttl : 28800,
+			log_retention : false,
+			cdn_uri : 'http://c1.r2.cf1.rackcdn.com',
+			cdn_ssl_uri : 'https://c1.ssl.cf1.rackcdn.com',
+			cdn_streaming_uri : 'https://c1.r2.stream.cf1.rackcdn.com'
+		},
+		{
+			name : 'full0',
+			cdn_enabled : true,
+			ttl : 28800,
+			log_retention : false,
+			cdn_uri : 'http://c2.r2.cf1.rackcdn.com',
+			cdn_ssl_uri : 'https://c2.ssl.cf1.rackcdn.com',
+			cdn_streaming_uri : 'https://c2.r2.stream.cf1.rackcdn.com'
+		}
+	],
 	CDN : function () {
-		var aContainers = [
-			{
-				name : 'one',
-				cdn_enabled : true,
-				ttl : 28800,
-				log_retention : false,
-				cdn_uri : 'http://c1.r2.cf1.rackcdn.com',
-				cdn_ssl_uri : 'https://c1.ssl.cf1.rackcdn.com',
-				cdn_streaming_uri : 'https://c1.r2.stream.cf1.rackcdn.com'
-			},
-			{
-				name : 'full0',
-				cdn_enabled : true,
-				ttl : 28800,
-				log_retention : false,
-				cdn_uri : 'http://c2.r2.cf1.rackcdn.com',
-				cdn_ssl_uri : 'https://c2.ssl.cf1.rackcdn.com',
-				cdn_streaming_uri : 'https://c2.r2.stream.cf1.rackcdn.com'
-			}
-		];
-
 		var path = url.parse(mockOptions.cdn).pathname + '?format=json';
-		var scope = nock(mockOptions.cdn).get(path).matchHeader('X-Auth-Token', mockOptions.token).reply(200, JSON.stringify(aContainers));
+		var scope = nock(mockOptions.cdn)
+			.get(path)
+			.matchHeader('X-Auth-Token', mockOptions.token)
+			.reply(200, JSON.stringify(this.aCDNContainers));
 
 		this.scopes.push(scope);
 		return this;
@@ -134,9 +197,9 @@ var superNock = {
 			.matchHeader('Content-Type', type);
 
 		if (chunked) {
-			//scope.matchHeader('Transfer-Encoding', 'chunked');
+			scope.matchHeader('Transfer-Encoding', 'chunked');
 		} else {
-			//scope.matchHeader('Content-Length', Buffer.byteLength(data));
+			scope.matchHeader('Content-Length', Buffer.byteLength(data));
 		}
 
 		scope = scope.reply(201);
@@ -166,6 +229,49 @@ var superNock = {
 			.put(path)
 			.matchHeader('X-Auth-Token', mockOptions.token)
 			.reply(201);
+
+		this.scopes.push(scope);
+		return this;
+	},
+	list : function (prefix, limit) {
+		var container, basepath, path, i, count, j, objects
+		var scope = nock(mockOptions.storage);
+
+		// There may be more than one container with this prefix, and the client will be requesting from all
+		for (i = 0; i < this.aContainers.length; i++) {
+			container = this.aContainers[i];
+
+			// Skip containers that don't have the given prefix
+			if (container.name.indexOf(prefix) !== 0)
+				continue;
+
+			basepath = url.parse(mockOptions.storage).pathname + '/' + container.name;
+			basepath += '?format=json&limit=' + limit;
+
+			// If the container has no objects, respond with 204.
+			if (!container.objects || container.objects.length === 0) {
+				scope.get(basepath).reply(204);
+				continue;
+			}
+
+			// The client may have to make multiple requests to this container depending on the limit
+			for (count = 0; count <= container.objects.length; count += limit) {
+				path = basepath;
+
+				// If count > 0, the client will be requesting with a marker item from last response
+				if (count > 0) {
+					path = basepath + '&marker=' + container.objects[count-1].name
+				}
+
+				// Generate an array of object data to reply with
+				objects = [];
+				for (j = count; j < count+limit && j < container.objects.length; j++) {
+					objects.push(container.objects[j]);
+				}
+
+				scope.get(path).reply(200, JSON.stringify(objects));
+			}
+		}
 
 		this.scopes.push(scope);
 		return this;
@@ -269,15 +375,21 @@ describe('Rackit', function () {
 				key : rackitOptions.key
 			});
 			rackit.init(function (err) {
+				var i;
+
 				should.not.exist(err);
 
-				rackit.aContainers.should.have.length(3);
-				rackit.hContainers.should.have.ownProperty('one');
-				rackit.hContainers.should.have.ownProperty('full0');
-				rackit.hContainers.should.have.ownProperty('exists0');
-				rackit.aCDNContainers.should.have.length(2);
-				rackit.hCDNContainers.should.have.ownProperty('one');
-				rackit.hCDNContainers.should.have.ownProperty('full0');
+				// Check the storage container cache
+				rackit.aContainers.should.have.length(superNock.aContainers.length);
+				for (i = 0; i < superNock.aContainers.length; i++) {
+					rackit.hContainers.should.have.ownProperty(superNock.aContainers[i].name);
+				}
+
+				// Check the CDN container cache
+				rackit.aCDNContainers.should.have.length(superNock.aCDNContainers.length);
+				for (i = 0; i < superNock.aCDNContainers.length; i++) {
+					rackit.hCDNContainers.should.have.ownProperty(superNock.aCDNContainers[i].name);
+				}
 
 				superNock.allDone();
 				cb();
@@ -364,7 +476,7 @@ describe('Rackit', function () {
 			});
 
 			it('should successfuly upload a file (to existing, non-full container)', function (cb) {
-				var container = 'exists0';
+				var container = 'empty0';
 				var count = getFreeContainerCount(container);
 
 				// Perform the actual test
@@ -373,7 +485,7 @@ describe('Rackit', function () {
 			});
 
 			it('should allow overriding of the content-type', function (cb) {
-				var container = 'exists0';
+				var container = 'empty0';
 				var count = getFreeContainerCount(container);
 
 				var type = 'text/mytype';
@@ -408,7 +520,7 @@ describe('Rackit', function () {
 			});
 
 			it('should successfuly upload a file stream with explicit type', function (cb) {
-				var container = 'exists0';
+				var container = 'empty0';
 				var count = getFreeContainerCount(container);
 
 				var stream = fs.createReadStream(testFile.path);
@@ -417,7 +529,7 @@ describe('Rackit', function () {
 			});
 
 			it('should successfuly upload a ServerRequest stream with forwarded type', function (cb) {
-				var container = 'exists0';
+				var container = 'empty0';
 				var count = getFreeContainerCount(container);
 
 				superNock.add(container, testFile.data, testFile.type, true);
@@ -440,7 +552,7 @@ describe('Rackit', function () {
 			});
 
 			it('should successfuly upload a ServerRequest stream with explicit type', function (cb) {
-				var container = 'exists0';
+				var container = 'empty0';
 				var count = getFreeContainerCount(container);
 				var type = 'text/pdf';
 
@@ -685,6 +797,7 @@ describe('Rackit', function () {
 			});
 
 			stream.on('end', function() {
+				superNock.allDone();
 				data.should.equal(testFile.data);
 				cb();
 			});
@@ -775,4 +888,147 @@ describe('Rackit', function () {
 		});
 
 	});
+
+	describe('#list', function () {
+		var rackit;
+
+		// Initialize Rackit before the tests
+		before(function (cb) {
+			superNock.typicalResponse();
+			rackit = new Rackit({
+				user : rackitOptions.user,
+				key : rackitOptions.key
+			});
+			rackit.init(function (err) {
+				superNock.allDone();
+				cb(err);
+			});
+		});
+
+		// Gets an array of containers for a prefix
+		function getContainers (prefix) {
+			var i, containers = [];
+
+			for (i = 0; i < superNock.aContainers.length; i++) {
+				// If the container doesn't have the prefix, skip it
+				if (superNock.aContainers[i].name.indexOf(prefix) !== 0)
+					continue;
+
+				containers.push(superNock.aContainers[i]);
+			}
+
+			return containers;
+		}
+
+		// Gets all of the object cloudpaths belonging to the given containers. This function gets the objects
+		// from the mock (the "actual" data store) for validation of what Rackit gives
+		function getObjects (containers) {
+			var i, j, container, objects = [];
+
+			// Find the actual container objects to validate
+			for (i = 0; i < containers.length; i++) {
+				container = containers[i];
+
+				// If the container doesn't have any objects, skip it
+				if (!container.objects || !container.objects.length)
+					continue;
+
+				// Iterate each object in this container, adding the cloudpath to the object list
+				for (j = 0; j < container.objects.length; j++) {
+					objects.push(container.name + '/' + container.objects[j].name);
+				}
+			}
+
+			return objects;
+		}
+
+		// Asserts the list operation matches the provided list
+		function assertList(prefix, listLimit, objects, cb) {
+			// Set the test options to Rackit
+			rackit.options.prefix = prefix;
+			rackit.options.listLimit = listLimit;
+
+			// Set up the nock to respond to Rackit's requests
+			superNock.list(prefix, listLimit);
+
+			// Call Rackits list method
+			rackit.list(function(err, list) {
+				superNock.allDone();
+				should.not.exist(err);
+				should.exist(list);
+
+				// Check the result length
+				list.should.have.length(objects.length);
+
+				// Check the result contents
+				for (var i = 0; i < objects.length; i++) {
+					list.should.include(objects[i]);
+				}
+
+				cb();
+			});
+		}
+
+		it('should return an empty array if there are yet no files', function (cb) {
+			var prefix = 'empty';
+
+			// Assert the test conditions (no files)
+			getObjects(getContainers(prefix)).length.should.equal(0);
+
+			assertList(prefix, 10000, [], cb);
+		});
+
+		it('should return all items when there is one container (under list limit)', function (cb) {
+			var prefix = 'single';
+
+			// Assert the test conditions (one container)
+			var containers = getContainers(prefix);
+			containers.length.should.equal(1);
+
+			// Find the actual container objects to validate
+			var objects = getObjects(containers);
+			objects.length.should.be.above(0);
+
+			// Set the list limit to be greater than this, to ensure test conditions
+			var listLimit = objects.length + 1;
+
+			assertList(prefix, listLimit, objects, cb);
+		});
+
+		it('should return all items when there is one container (over list limit)', function (cb) {
+			var prefix = 'single';
+
+			// Assert the test conditions (one container)
+			var containers = getContainers(prefix);
+			containers.length.should.equal(1);
+
+			// Find the actual container objects to validate
+			var objects = getObjects(containers);
+			objects.length.should.be.above(1);
+
+			// Set the list limit to be greater than this, to ensure test conditions
+			var listLimit = objects.length - 1;
+
+			assertList(prefix, listLimit, objects, cb);
+		});
+
+		it('should return all items when there are multiple containers (over list limit)', function (cb) {
+			var prefix = 'multiple';
+			var listLimit = 1;
+
+			// Assert the test conditions (multiple containers, above limit)
+			var containers = getContainers(prefix);
+			containers.length.should.be.above(1);
+
+			// Assert that one of the containers (first one) is above the list limit
+			getObjects([containers[0]]).length.should.be.above(listLimit);
+
+			// Find the actual container objects to validate
+			var objects = getObjects(containers);
+
+			assertList(prefix, listLimit, objects, cb);
+		});
+
+	});
+
 });
