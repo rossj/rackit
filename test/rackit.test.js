@@ -217,12 +217,13 @@ var superNock = {
 			.filteringPath(new RegExp(container + '/.*', 'g'), container + '/filename')
 			.put(path, data)
 			.matchHeader('X-Auth-Token', mockOptions.token)
-			.matchHeader('Content-Type', type);
+			.matchHeader('Content-Type', type)
+			.matchHeader('ETag', undefined);
 
 		if (chunked) {
 			scope.matchHeader('Transfer-Encoding', 'chunked');
 		} else {
-			scope.matchHeader('Content-Length', Buffer.byteLength(data));
+			scope.matchHeader('Content-Length', '' + Buffer.byteLength(data));
 		}
 
 		scope = scope.reply(201);
@@ -612,7 +613,7 @@ describe('Rackit', function () {
 
 				var stream = fs.createReadStream(testFile.path);
 				superNock.add(container, testFile.data, testFile.type, true);
-				rackit.add(fs.createReadStream(testFile.path), {type: testFile.type}, assertAdd(container, count + 1, cb));
+				rackit.add(stream, {type: testFile.type}, assertAdd(container, count + 1, cb));
 			});
 
 			it('should successfuly upload a ServerRequest stream with forwarded type', function (cb) {
@@ -632,6 +633,54 @@ describe('Rackit', function () {
 					uri : 'http://localhost:7357',
 					headers: {
 						'content-type': 'text/plain'
+					}
+				});
+
+				fs.createReadStream(testFile.path).pipe(req);
+			});
+
+			it('should successfuly upload a ServerRequest stream with forwarded length', function (cb) {
+				var container = 'empty0';
+				var count = getFreeContainerCount(container);
+
+				superNock.add(container, testFile.data, testFile.type, false);
+
+				// Set up the small server that will forward the request to Rackit
+				var server = http.createServer(function(req, res) {
+					rackit.add(req, assertAdd(container, count + 1, cb));
+					server.close();
+				}).listen(7357);
+
+				// Create the request to the small server above
+				var req = request.put({
+					uri : 'http://localhost:7357',
+					headers: {
+						'content-type': 'text/plain',
+						'content-length': '' + Buffer.byteLength(testFile.data)
+					}
+				});
+
+				fs.createReadStream(testFile.path).pipe(req);
+			});
+
+			it('should not forward the etag header of a ServerRequest stream', function (cb) {
+				var container = 'empty0';
+				var count = getFreeContainerCount(container);
+
+				superNock.add(container, testFile.data, testFile.type, true);
+
+				// Set up the small server that will forward the request to Rackit
+				var server = http.createServer(function(req, res) {
+					rackit.add(req, assertAdd(container, count + 1, cb));
+					server.close();
+				}).listen(7357);
+
+				// Create the request to the small server above
+				var req = request.put({
+					uri : 'http://localhost:7357',
+					headers: {
+						'content-type': 'text/plain',
+						'etag' : 'somehashvalue234'
 					}
 				});
 
