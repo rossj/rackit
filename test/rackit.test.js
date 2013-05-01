@@ -319,6 +319,7 @@ var superNock = {
 describe('Rackit', function () {
 
 	describe('Constructor', function () {
+
 		it('should have default options', function () {
 			var rackit = new Rackit();
 			rackit.should.be.an['instanceof'](Rackit);
@@ -328,6 +329,7 @@ describe('Rackit', function () {
 			rackit.options.baseURIs[clientOptions.region].should.equal('https://auth.api.rackspacecloud.com/v1.0');
 			rackit.options.baseURIs['UK'].should.equal('https://lon.auth.api.rackspacecloud.com/v1.0');
 		});
+
 		it('should allow overriding of default options', function () {
 			var rackit = new Rackit({
 				pre : 'dep',
@@ -429,7 +431,19 @@ describe('Rackit', function () {
 
 	});
 
-	describe('#_getPrefixedContainers', function() {
+	describe('improper initialization', function () {
+		it('should throw an error if attempting to call certain methods before init()', function () {
+			var rackit = new Rackit({
+				user : rackitOptions.user,
+				key : rackitOptions.key
+			});
+			(function() {
+				rackit.add(testFile.path);
+			}).should.throw(/^Attempting to use/);
+		});
+	});
+
+	describe('#_getPrefixedContainers', function () {
 		var rackit;
 
 		// Start off with a new, initialized rackit
