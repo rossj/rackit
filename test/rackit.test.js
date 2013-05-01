@@ -1,4 +1,6 @@
-/*global require, __dirname, describe, it, before, beforeEach, after*/
+/*global require, describe, it, before, beforeEach, after*/ // global functions
+/*global Error, Buffer*/ // global classes
+/*global __dirname*/ // global vars
 var
 // Node modules
 	url = require('url'),
@@ -236,6 +238,8 @@ var superNock = {
 		var scope = nock(mockOptions.storage)
 			.get(path)
 			.reply(200, data);
+		this.scopes.push(scope);
+		return this;
 	},
 	createContainer : function (container) {
 		var path = url.parse(mockOptions.storage).pathname + '/' + container;
@@ -494,9 +498,7 @@ describe('Rackit', function () {
 		// The return value is the current size of the container.
 		function getFreeContainerCount(container) {
 			// Get the prefix
-			var prefix = container.replace(/\d+$/, '');
-
-			rackit.options.prefix = prefix;
+			rackit.options.prefix = container.replace(/\d+$/, '');
 
 			// Assert that the container exists, and is not to capacity
 			rackit.hContainers.should.have.property(container);
@@ -921,7 +923,6 @@ describe('Rackit', function () {
 
 		it('should return a readable stream', function (cb) {
 			var cloudpath = 'container/file';
-			var filepath = __dirname + '/tempfile.txt';
 			superNock.get(cloudpath, testFile.data);
 
 			// Get the file
