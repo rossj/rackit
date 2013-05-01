@@ -93,61 +93,71 @@ var superNock = {
 			name : 'single0',
 			count : 2,
 			bytes : 2000,
-			objects : [{
-				name : 'obj1',
-				hash : 'randomhash',
-				bytes : 1000,
-				content_type : 'application\/octet-stream',
-				last_modified : '2012-1-01T00:00:0.0'
-			}, {
-				name : 'obj2',
-				hash : 'randomhash',
-				bytes : 1000,
-				content_type : 'application\/octet-stream',
-				last_modified : '2012-1-01T00:00:0.0'
-			}]
+			objects : [
+				{
+					name : 'obj1',
+					hash : 'randomhash',
+					bytes : 1000,
+					content_type : 'application\/octet-stream',
+					last_modified : '2012-1-01T00:00:0.0'
+				},
+				{
+					name : 'obj2',
+					hash : 'randomhash',
+					bytes : 1000,
+					content_type : 'application\/octet-stream',
+					last_modified : '2012-1-01T00:00:0.0'
+				}
+			]
 		},
 		{
 			name : 'multiple0',
 			count : 3,
 			bytes : 3000,
-			objects : [{
-				name : 'obj1',
-				hash : 'randomhash',
-				bytes : 1000,
-				content_type : 'application\/octet-stream',
-				last_modified : '2012-1-01T00:00:0.0'
-			}, {
-				name : 'obj2',
-				hash : 'randomhash',
-				bytes : 1000,
-				content_type : 'application\/octet-stream',
-				last_modified : '2012-1-01T00:00:0.0'
-			}, {
-				name : 'obj3',
-				hash : 'randomhash',
-				bytes : 1000,
-				content_type : 'application\/octet-stream',
-				last_modified : '2012-1-01T00:00:0.0'
-			}]
+			objects : [
+				{
+					name : 'obj1',
+					hash : 'randomhash',
+					bytes : 1000,
+					content_type : 'application\/octet-stream',
+					last_modified : '2012-1-01T00:00:0.0'
+				},
+				{
+					name : 'obj2',
+					hash : 'randomhash',
+					bytes : 1000,
+					content_type : 'application\/octet-stream',
+					last_modified : '2012-1-01T00:00:0.0'
+				},
+				{
+					name : 'obj3',
+					hash : 'randomhash',
+					bytes : 1000,
+					content_type : 'application\/octet-stream',
+					last_modified : '2012-1-01T00:00:0.0'
+				}
+			]
 		},
 		{
 			name : 'multiple1',
 			count : 2,
 			bytes : 2000,
-			objects : [{
-				name : 'obj4',
-				hash : 'randomhash',
-				bytes : 1000,
-				content_type : 'application\/octet-stream',
-				last_modified : '2012-1-01T00:00:0.0'
-			}, {
-				name : 'obj5',
-				hash : 'randomhash',
-				bytes : 1000,
-				content_type : 'application\/octet-stream',
-				last_modified : '2012-1-01T00:00:0.0'
-			}]
+			objects : [
+				{
+					name : 'obj4',
+					hash : 'randomhash',
+					bytes : 1000,
+					content_type : 'application\/octet-stream',
+					last_modified : '2012-1-01T00:00:0.0'
+				},
+				{
+					name : 'obj5',
+					hash : 'randomhash',
+					bytes : 1000,
+					content_type : 'application\/octet-stream',
+					last_modified : '2012-1-01T00:00:0.0'
+				}
+			]
 		},
 		{
 			name : 'multiplemultiple0',
@@ -166,7 +176,8 @@ var superNock = {
 		this.scopes.push(scope);
 		return this;
 	},
-	aCDNContainers : [{
+	aCDNContainers : [
+		{
 			name : 'one',
 			cdn_enabled : true,
 			ttl : 28800,
@@ -191,11 +202,11 @@ var superNock = {
 		var i = this.aContainers.length;
 		var reg = new RegExp('^' + prefix + '\\d+$');
 
-		while (i--) {
+		while ( i-- ) {
 			container = this.aContainers[i];
 
 			// If the container doesn't have the prefix, skip it
-			if (!container.name.match(reg))
+			if ( !container.name.match(reg) )
 				continue;
 
 			containers.push(container);
@@ -222,7 +233,7 @@ var superNock = {
 			.matchHeader('Content-Type', type)
 			.matchHeader('ETag', undefined);
 
-		if (chunked) {
+		if ( chunked ) {
 			scope.matchHeader('Transfer-Encoding', 'chunked');
 		} else {
 			scope.matchHeader('Content-Length', '' + Buffer.byteLength(data));
@@ -268,34 +279,34 @@ var superNock = {
 		var scope = nock(mockOptions.storage);
 
 		// There may be more than one container with this prefix, and the client will be requesting from all
-		while (i--) {
+		while ( i-- ) {
 			container = containers[i];
 
 			// Skip containers that don't have the given prefix
-			if (container.name.indexOf(prefix) !== 0)
+			if ( container.name.indexOf(prefix) !== 0 )
 				continue;
 
 			basepath = url.parse(mockOptions.storage).pathname + '/' + container.name;
 			basepath += '?format=json&limit=' + limit;
 
 			// If the container has no objects, respond with 204.
-			if (!container.objects || container.objects.length === 0) {
+			if ( !container.objects || container.objects.length === 0 ) {
 				scope.get(basepath).reply(204);
 				continue;
 			}
 
 			// The client may have to make multiple requests to this container depending on the limit
-			for (count = 0; count <= container.objects.length; count += limit) {
+			for ( count = 0; count <= container.objects.length; count += limit ) {
 				path = basepath;
 
 				// If count > 0, the client will be requesting with a marker item from last response
-				if (count > 0) {
-					path = basepath + '&marker=' + container.objects[count-1].name
+				if ( count > 0 ) {
+					path = basepath + '&marker=' + container.objects[count - 1].name
 				}
 
 				// Generate an array of object data to reply with
 				objects = [];
-				for (j = count; j < count+limit && j < container.objects.length; j++) {
+				for ( j = count; j < count + limit && j < container.objects.length; j++ ) {
 					objects.push(container.objects[j]);
 				}
 
@@ -414,13 +425,13 @@ describe('Rackit', function () {
 
 				// Check the storage container cache
 				rackit.aContainers.should.have.length(superNock.aContainers.length);
-				for (i = 0; i < superNock.aContainers.length; i++) {
+				for ( i = 0; i < superNock.aContainers.length; i++ ) {
 					rackit.hContainers.should.have.ownProperty(superNock.aContainers[i].name);
 				}
 
 				// Check the CDN container cache
 				rackit.aCDNContainers.should.have.length(superNock.aCDNContainers.length);
-				for (i = 0; i < superNock.aCDNContainers.length; i++) {
+				for ( i = 0; i < superNock.aCDNContainers.length; i++ ) {
 					rackit.hCDNContainers.should.have.ownProperty(superNock.aCDNContainers[i].name);
 				}
 
@@ -437,7 +448,7 @@ describe('Rackit', function () {
 				user : rackitOptions.user,
 				key : rackitOptions.key
 			});
-			(function() {
+			(function () {
 				rackit.add(testFile.path);
 			}).should.throw(/^Attempting to use/);
 		});
@@ -459,46 +470,59 @@ describe('Rackit', function () {
 			});
 		});
 
-		it('should return an empty array if no prefixed containers have been made', function() {
+		it('should return an empty array if no prefixed containers have been made', function () {
 			// Hack some data into Rackit
 			rackit.options.prefix = 'nonexistent';
-			rackit.aContainers = [{
-				name: 'existent'
-			}];
+			rackit.aContainers = [
+				{
+					name : 'existent'
+				}
+			];
 
 			rackit._getPrefixedContainers().should.have.length(0);
 		});
 
-		it('should return a sorted array of prefixed containers', function() {
+		it('should return a sorted array of prefixed containers', function () {
 			// Hack some data into Rackit
 			rackit.options.prefix = 'existent';
-			rackit.aContainers = [{
-				name: 'blah0'
-			}, {
-				name: 'existent2'
-			}, {
-				name: 'existent3'
-			}, {
-				name: 'existent0'
-			}];
+			rackit.aContainers = [
+				{
+					name : 'blah0'
+				},
+				{
+					name : 'existent2'
+				},
+				{
+					name : 'existent3'
+				},
+				{
+					name : 'existent0'
+				}
+			];
 
 			rackit._getPrefixedContainers().should.eql(['existent0', 'existent2', 'existent3']);
 		});
 
-		it('should not include containers with a matching sub-prefix', function() {
+		it('should not include containers with a matching sub-prefix', function () {
 			// Hack some data into Rackit
 			rackit.options.prefix = 'existent';
-			rackit.aContainers = [{
-				name: 'blah0'
-			}, {
-				name: 'existent2'
-			}, {
-				name: 'existent3'
-			}, {
-				name: 'existent0'
-			}, {
-				name: 'existenter0'
-			}];
+			rackit.aContainers = [
+				{
+					name : 'blah0'
+				},
+				{
+					name : 'existent2'
+				},
+				{
+					name : 'existent3'
+				},
+				{
+					name : 'existent0'
+				},
+				{
+					name : 'existenter0'
+				}
+			];
 
 			rackit._getPrefixedContainers().should.eql(['existent0', 'existent2', 'existent3']);
 		});
@@ -525,7 +549,7 @@ describe('Rackit', function () {
 		// Asserts that a successful file upload occured.
 		function assertAdd(container, count, cb) {
 			return function (err, cloudpath) {
-				if (err) {
+				if ( err ) {
 					console.log(err);
 				}
 
@@ -561,7 +585,7 @@ describe('Rackit', function () {
 			});
 		});
 
-		describe('local file upload (string param)', function() {
+		describe('local file upload (string param)', function () {
 
 			it('should return an error if the file does not exist', function (cb) {
 				var filepath = path.resolve(__dirname, 'fakefile.txt');
@@ -594,12 +618,12 @@ describe('Rackit', function () {
 
 				var type = 'text/mytype';
 				superNock.add(container, testFile.data, type);
-				rackit.add(testFile.path, { type: type }, assertAdd(container, count + 1, cb));
+				rackit.add(testFile.path, { type : type }, assertAdd(container, count + 1, cb));
 			});
 
 		});
 
-		describe('streaming upload (ReadableStream param)', function() {
+		describe('streaming upload (ReadableStream param)', function () {
 
 			it('should return an error if the stream is not readable', function (cb) {
 				var stream = fs.createReadStream(testFile.path);
@@ -613,7 +637,7 @@ describe('Rackit', function () {
 				});
 			});
 
-			it('should return an error if no type is specified (and no content-type header)', function(cb) {
+			it('should return an error if no type is specified (and no content-type header)', function (cb) {
 				var stream = fs.createReadStream(testFile.path);
 				rackit.add(stream, function (err, cloudpath) {
 					should.exist(err);
@@ -629,7 +653,7 @@ describe('Rackit', function () {
 
 				var stream = fs.createReadStream(testFile.path);
 				superNock.add(container, testFile.data, testFile.type, true);
-				rackit.add(stream, {type: testFile.type}, assertAdd(container, count + 1, cb));
+				rackit.add(stream, {type : testFile.type}, assertAdd(container, count + 1, cb));
 			});
 
 			it('should successfuly upload a ServerRequest stream with forwarded type', function (cb) {
@@ -639,7 +663,7 @@ describe('Rackit', function () {
 				superNock.add(container, testFile.data, testFile.type, true);
 
 				// Set up the small server that will forward the request to Rackit
-				var server = http.createServer(function(req, res) {
+				var server = http.createServer(function (req, res) {
 					rackit.add(req, assertAdd(container, count + 1, cb));
 					server.close();
 				}).listen(7357);
@@ -647,8 +671,8 @@ describe('Rackit', function () {
 				// Create the request to the small server above
 				var req = request.put({
 					uri : 'http://localhost:7357',
-					headers: {
-						'content-type': 'text/plain'
+					headers : {
+						'content-type' : 'text/plain'
 					}
 				});
 
@@ -662,7 +686,7 @@ describe('Rackit', function () {
 				superNock.add(container, testFile.data, testFile.type, false);
 
 				// Set up the small server that will forward the request to Rackit
-				var server = http.createServer(function(req, res) {
+				var server = http.createServer(function (req, res) {
 					rackit.add(req, assertAdd(container, count + 1, cb));
 					server.close();
 				}).listen(7357);
@@ -670,9 +694,9 @@ describe('Rackit', function () {
 				// Create the request to the small server above
 				var req = request.put({
 					uri : 'http://localhost:7357',
-					headers: {
-						'content-type': 'text/plain',
-						'content-length': '' + Buffer.byteLength(testFile.data)
+					headers : {
+						'content-type' : 'text/plain',
+						'content-length' : '' + Buffer.byteLength(testFile.data)
 					}
 				});
 
@@ -686,7 +710,7 @@ describe('Rackit', function () {
 				superNock.add(container, testFile.data, testFile.type, true);
 
 				// Set up the small server that will forward the request to Rackit
-				var server = http.createServer(function(req, res) {
+				var server = http.createServer(function (req, res) {
 					rackit.add(req, assertAdd(container, count + 1, cb));
 					server.close();
 				}).listen(7357);
@@ -694,8 +718,8 @@ describe('Rackit', function () {
 				// Create the request to the small server above
 				var req = request.put({
 					uri : 'http://localhost:7357',
-					headers: {
-						'content-type': 'text/plain',
+					headers : {
+						'content-type' : 'text/plain',
 						'etag' : 'somehashvalue234'
 					}
 				});
@@ -711,7 +735,7 @@ describe('Rackit', function () {
 				superNock.add(container, testFile.data, type, true);
 
 				// Set up the small server that will forward the request to Rackit
-				var server = http.createServer(function(req, res) {
+				var server = http.createServer(function (req, res) {
 					rackit.add(req, {type : type}, assertAdd(container, count + 1, cb));
 					server.close();
 				}).listen(7357);
@@ -719,8 +743,8 @@ describe('Rackit', function () {
 				// Create the request to the small server above
 				var req = request.put({
 					uri : 'http://localhost:7357',
-					headers: {
-						'content-type': 'text/plain'
+					headers : {
+						'content-type' : 'text/plain'
 					}
 				});
 
@@ -943,11 +967,11 @@ describe('Rackit', function () {
 			var stream = rackit.get(cloudpath);
 
 			var data = '';
-			stream.on('data', function(chunk) {
+			stream.on('data', function (chunk) {
 				data += chunk;
 			});
 
-			stream.on('end', function() {
+			stream.on('end', function () {
 				superNock.allDone();
 				data.should.equal(testFile.data);
 				cb();
@@ -960,9 +984,9 @@ describe('Rackit', function () {
 			superNock.get(cloudpath, testFile.data);
 
 			// Get the file
-			rackit.get(cloudpath, filepath, function(err) {
+			rackit.get(cloudpath, filepath, function (err) {
 				// Test the data
-				fs.readFile(filepath, 'utf8', function(err, data) {
+				fs.readFile(filepath, 'utf8', function (err, data) {
 					data.should.equal(testFile.data);
 					fs.unlink(filepath, cb);
 				});
@@ -1057,22 +1081,21 @@ describe('Rackit', function () {
 		});
 
 
-
 		// Gets all of the object cloudpaths belonging to the given containers. This function gets the objects
 		// from the mock (the "actual" data store) for validation of what Rackit gives
-		function getObjects (containers) {
+		function getObjects(containers) {
 			var i, j, container, object, objects = [];
 
 			// Find the actual container objects to validate
-			for (i = 0; i < containers.length; i++) {
+			for ( i = 0; i < containers.length; i++ ) {
 				container = containers[i];
 
 				// If the container doesn't have any objects, skip it
-				if (!container.objects || !container.objects.length)
+				if ( !container.objects || !container.objects.length )
 					continue;
 
 				// Iterate each object in this container, adding the container to the object name
-				for (j = 0; j < container.objects.length; j++) {
+				for ( j = 0; j < container.objects.length; j++ ) {
 					object = container.objects[j];
 					objects.push({
 						cloudpath : container.name + '/' + object.name,
@@ -1087,9 +1110,9 @@ describe('Rackit', function () {
 			return objects;
 		}
 
-		function getObjectCloudpaths (objects) {
+		function getObjectCloudpaths(objects) {
 			var i = objects.length;
-			while (i--)
+			while ( i-- )
 				objects[i] = objects[i].cloudpath;
 
 			return objects;
@@ -1105,7 +1128,7 @@ describe('Rackit', function () {
 			superNock.list(prefix, listLimit);
 
 			// Call Rackits list method
-			rackit.list(function(err, list) {
+			rackit.list(function (err, list) {
 				superNock.allDone();
 				should.not.exist(err);
 				should.exist(list);
@@ -1114,7 +1137,7 @@ describe('Rackit', function () {
 				list.should.have.length(objects.length);
 
 				// Check the result contents
-				for (var i = 0; i < objects.length; i++) {
+				for ( var i = 0; i < objects.length; i++ ) {
 					list.should.include(objects[i]);
 				}
 
@@ -1202,7 +1225,7 @@ describe('Rackit', function () {
 			superNock.list(prefix, listLimit);
 
 			// Call Rackits list method
-			rackit.list({ extended : true }, function(err, list) {
+			rackit.list({ extended : true }, function (err, list) {
 				superNock.allDone();
 				should.not.exist(err);
 				should.exist(list);
@@ -1211,7 +1234,7 @@ describe('Rackit', function () {
 				list.should.have.length(objects.length);
 
 				// Check the result contents
-				for (var i = 0; i < objects.length; i++) {
+				for ( var i = 0; i < objects.length; i++ ) {
 					list.should.includeEql(objects[i]);
 				}
 
