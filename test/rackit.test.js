@@ -12,12 +12,11 @@ var
 	async = require('async'),
 	should = require('should'),
 	nock = require('nock'),
-	request = require('request');
+	request = require('request'),
 
-var Rackit = require('../lib/main.js').Rackit;
-
-// Fake vars for our mock
-var clientOptions = Rackit.defaultOptions;
+// Project modules
+	Rackit = require('../lib/main.js').Rackit,
+	CloudFilesMock = require('./cloudfiles.mock.js');
 
 var rackitOptions = {
 	user : 'boopity',
@@ -25,11 +24,6 @@ var rackitOptions = {
 	tempURLKey : '3522d2sa'
 };
 
-var mockOptions = {
-	storage : 'https://storage.blablah.com/v1/blah',
-	cdn : 'https://cdn.blablah.com/v1/blah',
-	token : 'boopitybopitydadabop'
-};
 
 // Info for the file we will upload
 var testFile = {
@@ -42,37 +36,7 @@ testFile.data = fs.readFileSync(testFile.path, 'utf8');
  * A simple helper object for generating sequences of mock Rackspace responses
  * @type {Object}
  */
-var superNock = {
-	scopes : [],
-	typicalResponse : function () {
-		return this.auth().storage().CDN();
-	},
-	auth : function () {
-		// Setup nock to respond to a good auth request, twice
-		var path = url.parse(clientOptions.baseURIs[clientOptions.region]).pathname;
-		var scope = nock(clientOptions.baseURIs[clientOptions.region])
-			.get(path)
-			.matchHeader('X-Auth-User', rackitOptions.user)
-			.matchHeader('X-Auth-Key', rackitOptions.key)
-			.reply(204, 'No Content', {
-				'x-storage-url' : mockOptions.storage,
-				'x-cdn-management-url' : mockOptions.cdn,
-				'x-auth-token' : mockOptions.token
-			});
-
-		this.scopes.push(scope);
-		return this;
-	},
-	tempURL : function () {
-		var path = url.parse(mockOptions.storage).pathname;
-		var scope = nock(mockOptions.storage)
-			.post(path)
-			.matchHeader('X-Account-Meta-Temp-Url-Key', rackitOptions.tempURLKey)
-			.reply(204, 'No Content');
-
-		this.scopes.push(scope);
-		return this;
-	},
+var containers = {
 	aContainers : [
 		{
 			name : 'one',
@@ -165,17 +129,6 @@ var superNock = {
 			bytes : 2000
 		}
 	],
-
-	storage : function () {
-		var path = url.parse(mockOptions.storage).pathname + '?format=json';
-		var scope = nock(mockOptions.storage)
-			.get(path)
-			.matchHeader('X-Auth-Token', mockOptions.token)
-			.reply(200, JSON.stringify(this.aContainers));
-
-		this.scopes.push(scope);
-		return this;
-	},
 	aCDNContainers : [
 		{
 			name : 'one',
@@ -195,137 +148,10 @@ var superNock = {
 			cdn_ssl_uri : 'https://c2.ssl.cf1.rackcdn.com',
 			cdn_streaming_uri : 'https://c2.r2.stream.cf1.rackcdn.com'
 		}
-	],
-	// Gets an array of containers matching a prefix
-	getPrefixedContainers : function (prefix) {
-		var container, containers = [];
-		var i = this.aContainers.length;
-		var reg = new RegExp('^' + prefix + '\\d+$');
-
-		while ( i-- ) {
-			container = this.aContainers[i];
-
-			// If the container doesn't have the prefix, skip it
-			if ( !container.name.match(reg) )
-				continue;
-
-			containers.push(container);
-		}
-
-		return containers;
-	},
-	CDN : function () {
-		var path = url.parse(mockOptions.cdn).pathname + '?format=json';
-		var scope = nock(mockOptions.cdn)
-			.get(path)
-			.matchHeader('X-Auth-Token', mockOptions.token)
-			.reply(200, JSON.stringify(this.aCDNContainers));
-
-		this.scopes.push(scope);
-		return this;
-	},
-	add : function (container, data, type, chunked) {
-		var path = url.parse(mockOptions.storage).pathname + '/' + container + '/filename';
-		var scope = nock(mockOptions.storage)
-			.filteringPath(new RegExp(container + '/.*', 'g'), container + '/filename')
-			.put(path, data)
-			.matchHeader('X-Auth-Token', mockOptions.token)
-			.matchHeader('Content-Type', type)
-			.matchHeader('ETag', undefined);
-
-		if ( chunked ) {
-			scope.matchHeader('Transfer-Encoding', 'chunked');
-		} else {
-			scope.matchHeader('Content-Length', '' + Buffer.byteLength(data));
-		}
-
-		scope = scope.reply(201);
-
-		this.scopes.push(scope);
-		return this;
-	},
-	get : function (cloudpath, data) {
-		var path = url.parse(mockOptions.storage).pathname + '/' + cloudpath;
-		var scope = nock(mockOptions.storage)
-			.get(path)
-			.reply(200, data);
-		this.scopes.push(scope);
-		return this;
-	},
-	createContainer : function (container) {
-		var path = url.parse(mockOptions.storage).pathname + '/' + container;
-		var scope = nock(mockOptions.storage)
-			.put(path)
-			.matchHeader('X-Auth-Token', mockOptions.token)
-			.reply(201);
-
-		this.scopes.push(scope);
-		return this;
-	},
-	enableCDN : function (container) {
-		var path = url.parse(mockOptions.cdn).pathname + '/' + container;
-		var scope = nock(mockOptions.cdn)
-			.put(path)
-			.matchHeader('X-Auth-Token', mockOptions.token)
-			.reply(201);
-
-		this.scopes.push(scope);
-		return this;
-	},
-	list : function (prefix, limit) {
-		var containers = this.getPrefixedContainers(prefix);
-		var i = containers.length;
-		var container, basepath, path, count, j, objects;
-		var scope = nock(mockOptions.storage);
-
-		// There may be more than one container with this prefix, and the client will be requesting from all
-		while ( i-- ) {
-			container = containers[i];
-
-			// Skip containers that don't have the given prefix
-			if ( container.name.indexOf(prefix) !== 0 )
-				continue;
-
-			basepath = url.parse(mockOptions.storage).pathname + '/' + container.name;
-			basepath += '?format=json&limit=' + limit;
-
-			// If the container has no objects, respond with 204.
-			if ( !container.objects || container.objects.length === 0 ) {
-				scope.get(basepath).reply(204);
-				continue;
-			}
-
-			// The client may have to make multiple requests to this container depending on the limit
-			for ( count = 0; count <= container.objects.length; count += limit ) {
-				path = basepath;
-
-				// If count > 0, the client will be requesting with a marker item from last response
-				if ( count > 0 ) {
-					path = basepath + '&marker=' + container.objects[count - 1].name
-				}
-
-				// Generate an array of object data to reply with
-				objects = [];
-				for ( j = count; j < count + limit && j < container.objects.length; j++ ) {
-					objects.push(container.objects[j]);
-				}
-
-				scope.get(path).reply(200, JSON.stringify(objects));
-			}
-		}
-
-		this.scopes.push(scope);
-		return this;
-	},
-	allDone : function () {
-		// Assert that all the scopes are done
-		for ( var i = 0; i < this.scopes.length; i++ ) {
-			this.scopes[i].done();
-		}
-		// Clear all scopes
-		this.scopes = [];
-	}
+	]
 };
+
+var superNock = new CloudFilesMock(rackitOptions, containers.aContainers, containers.aCDNContainers);
 
 describe('Rackit', function () {
 
@@ -337,7 +163,7 @@ describe('Rackit', function () {
 			rackit.options.prefix.should.equal('dev');
 			rackit.options.useCDN.should.equal(true);
 			rackit.options.region.should.equal('US');
-			rackit.options.baseURIs[clientOptions.region].should.equal('https://auth.api.rackspacecloud.com/v1.0');
+			rackit.options.baseURIs['US'].should.equal('https://auth.api.rackspacecloud.com/v1.0');
 			rackit.options.baseURIs['UK'].should.equal('https://lon.auth.api.rackspacecloud.com/v1.0');
 		});
 
@@ -367,12 +193,14 @@ describe('Rackit', function () {
 
 		it('should return an error when bad credentials are given', function (cb) {
 			// Setup nock to respond to bad auth request
-			var path = url.parse(clientOptions.baseURIs[clientOptions.region]).pathname;
-			var scope = nock(clientOptions.baseURIs[clientOptions.region]).get(path).reply(401, 'Unauthorized');
+			var defaultOptions = Rackit.defaultOptions;
+			var path = url.parse(defaultOptions.baseURIs[defaultOptions.region]).pathname;
+			var scope = nock(defaultOptions.baseURIs[defaultOptions.region]).get(path).reply(401, 'Unauthorized');
 
 			var rackit = new Rackit({
 				user : rackitOptions.user + 'blahblah',
-				key : rackitOptions.key + 'bloopidy'
+				key : rackitOptions.key + 'bloopidy',
+				tempURLKey : rackitOptions.tempURLKey
 			});
 			rackit.init(function (err) {
 				should.exist(err);
@@ -385,10 +213,7 @@ describe('Rackit', function () {
 		it('should not return an error with good credentials', function (cb) {
 			superNock.typicalResponse();
 
-			var rackit = new Rackit({
-				user : rackitOptions.user,
-				key : rackitOptions.key
-			});
+			var rackit = new Rackit(rackitOptions);
 			rackit.init(function (err) {
 				should.not.exist(err);
 				superNock.allDone();
@@ -397,13 +222,9 @@ describe('Rackit', function () {
 		});
 
 		it('should set temp url key if provided', function (cb) {
-			superNock.typicalResponse().tempURL();
+			superNock.typicalResponse();
 
-			var rackit = new Rackit({
-				user : rackitOptions.user,
-				key : rackitOptions.key,
-				tempURLKey : rackitOptions.tempURLKey
-			});
+			var rackit = new Rackit(rackitOptions);
 			rackit.init(function (err) {
 				should.not.exist(err);
 				superNock.allDone();
@@ -414,10 +235,7 @@ describe('Rackit', function () {
 		it('should get container info and cache it', function (cb) {
 			superNock.typicalResponse();
 
-			var rackit = new Rackit({
-				user : rackitOptions.user,
-				key : rackitOptions.key
-			});
+			var rackit = new Rackit(rackitOptions);
 			rackit.init(function (err) {
 				var i;
 
@@ -444,10 +262,7 @@ describe('Rackit', function () {
 
 	describe('improper initialization', function () {
 		it('should throw an error if attempting to call certain methods before init()', function () {
-			var rackit = new Rackit({
-				user : rackitOptions.user,
-				key : rackitOptions.key
-			});
+			var rackit = new Rackit(rackitOptions);
 			(function () {
 				rackit.add(testFile.path);
 			}).should.throw(/^Attempting to use/);
@@ -460,10 +275,7 @@ describe('Rackit', function () {
 		// Start off with a new, initialized rackit
 		before(function (cb) {
 			superNock.typicalResponse();
-			rackit = new Rackit({
-				user : rackitOptions.user,
-				key : rackitOptions.key
-			});
+			rackit = new Rackit(rackitOptions);
 			rackit.init(function (err) {
 				superNock.allDone();
 				cb(err);
@@ -573,12 +385,8 @@ describe('Rackit', function () {
 
 		// Start off each test with a new, initialized rackit
 		beforeEach(function (cb) {
-			superNock.typicalResponse().tempURL();
-			rackit = new Rackit({
-				user : rackitOptions.user,
-				key : rackitOptions.key,
-				tempURLKey : rackitOptions.tempURLKey
-			});
+			superNock.typicalResponse();
+			rackit = new Rackit(rackitOptions);
 			rackit.init(function (err) {
 				superNock.allDone();
 				cb(err);
@@ -949,10 +757,7 @@ describe('Rackit', function () {
 
 		before(function (cb) {
 			superNock.typicalResponse();
-			rackit = new Rackit({
-				user : rackitOptions.user,
-				key : rackitOptions.key
-			});
+			rackit = new Rackit(rackitOptions);
 			rackit.init(function (err) {
 				superNock.allDone();
 				cb(err);
@@ -998,12 +803,8 @@ describe('Rackit', function () {
 		var rackit;
 
 		before(function (cb) {
-			superNock.typicalResponse().tempURL();
-			rackit = new Rackit({
-				user : rackitOptions.user,
-				key : rackitOptions.key,
-				tempURLKey : rackitOptions.tempURLKey
-			});
+			superNock.typicalResponse();
+			rackit = new Rackit(rackitOptions);
 			rackit.init(function (err) {
 				superNock.allDone();
 				cb(err);
@@ -1070,10 +871,7 @@ describe('Rackit', function () {
 		// Initialize Rackit before the tests
 		before(function (cb) {
 			superNock.typicalResponse();
-			rackit = new Rackit({
-				user : rackitOptions.user,
-				key : rackitOptions.key
-			});
+			rackit = new Rackit(rackitOptions);
 			rackit.init(function (err) {
 				superNock.allDone();
 				cb(err);
