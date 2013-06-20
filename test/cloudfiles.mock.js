@@ -35,7 +35,11 @@ var Mock = module.exports = function (rackitOptions, aContainers, aCDNContainers
 
 Mock.prototype = {
 	typicalResponse : function () {
-		return this.auth().storage().CDN().tempURL(this.rackitOptions.tempURLKey);
+		this.auth().storage().CDN();
+		if (this.rackitOptions.tempURLKey)
+			this.tempURL(this.rackitOptions.tempURLKey);
+
+		return this;
 	},
 	auth : function () {
 		// Setup nock to respond to a good auth request, twice
