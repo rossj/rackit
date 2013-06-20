@@ -108,8 +108,21 @@ Mock.prototype = {
 	add : function (container, data, type, chunked) {
 		var path = url.parse(mockOptions.storage).pathname + '/' + container + '/filename';
 		var scope = nock(mockOptions.storage)
-			.filteringPath(new RegExp(container + '/.*', 'g'), container + '/filename')
-			.put(path, data)
+			.filteringPath(new RegExp(container + '/.*', 'g'), container + '/filename');
+
+		// If data was specified, match it exactly
+		if (typeof data !==  'undefined') {
+			scope = scope.put(path, data);
+		} else {
+			// Data wasn't specified, so match anything
+			scope = scope
+				.filteringRequestBody(function() {
+					return '*';
+				})
+				.put(path, '*');
+		}
+
+		scope = scope
 			.matchHeader('X-Auth-Token', mockOptions.token)
 			.matchHeader('Content-Type', type)
 			.matchHeader('ETag', undefined);
@@ -117,7 +130,9 @@ Mock.prototype = {
 		if ( chunked ) {
 			scope.matchHeader('Transfer-Encoding', 'chunked');
 		} else {
-			scope.matchHeader('Content-Length', '' + Buffer.byteLength(data));
+			// If data was specified and non-chunked encoding, ensure the content-length is correct
+			var lengthMatch = typeof data === 'undefined' ? /.*/ : '' + Buffer.byteLength(data);
+			scope.matchHeader('Content-Length', lengthMatch);
 		}
 
 		scope = scope.reply(201);
