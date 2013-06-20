@@ -658,7 +658,7 @@ describe('Rackit', function () {
 			});
 		});
 
-		describe('automatic container creation - concurrent operations', function (cb) {
+		describe('automatic container creation - concurrent operations', function () {
 
 			it('parallel operations should produce one new container when none exist', function (cb) {
 				var prefix = 'new';
@@ -790,8 +790,10 @@ describe('Rackit', function () {
 
 			// Get the file
 			rackit.get(cloudpath, filepath, function (err) {
+				should.not.exist(err);
 				// Test the data
 				fs.readFile(filepath, 'utf8', function (err, data) {
+					should.not.exist(err);
 					data.should.equal(testFile.data);
 					fs.unlink(filepath, cb);
 				});
