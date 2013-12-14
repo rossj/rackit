@@ -9,9 +9,9 @@ var
 	http = require('http'),
 
 // Npm modules
+	_ = require('lodash'),
 	async = require('async'),
 	should = require('should'),
-	nock = require('nock'),
 	request = require('request'),
 
 // Project modules
@@ -246,9 +246,9 @@ describe('Rackit', function () {
 				should.not.exist(err);
 
 				// Check the storage container cache
-				rackit.aContainers.should.have.length(superNock.aContainers.length);
-				for ( i = 0; i < superNock.aContainers.length; i++ ) {
-					rackit.hContainers.should.have.ownProperty(superNock.aContainers[i].name);
+				rackit.aContainers.should.have.length(7);
+				for ( i = 0; i < rackit.aContainers.length; i++ ) {
+					rackit.aContainers[i].should.eql(containers.aContainers[i]);
 				}
 
 				// Check the CDN container cache
@@ -301,7 +301,7 @@ describe('Rackit', function () {
 		it('should return a sorted array of prefixed containers', function () {
 			// Hack some data into Rackit
 			rackit.options.prefix = 'existent';
-			rackit.aContainers = [
+			var containers = [
 				{
 					name : 'blah0'
 				},
@@ -316,13 +316,17 @@ describe('Rackit', function () {
 				}
 			];
 
-			rackit._getPrefixedContainers().should.eql(['existent0', 'existent2', 'existent3']);
+			var aContainers = rackit._getPrefixedContainers(containers);
+			aContainers.should.have.length(3);
+			aContainers[0].should.eql(containers[3]);
+			aContainers[1].should.eql(containers[1]);
+			aContainers[2].should.eql(containers[2]);
 		});
 
 		it('should not include containers with a matching sub-prefix', function () {
 			// Hack some data into Rackit
 			rackit.options.prefix = 'existent';
-			rackit.aContainers = [
+			var containers = [
 				{
 					name : 'blah0'
 				},
@@ -340,7 +344,11 @@ describe('Rackit', function () {
 				}
 			];
 
-			rackit._getPrefixedContainers().should.eql(['existent0', 'existent2', 'existent3']);
+			var aContainers = rackit._getPrefixedContainers(containers);
+			aContainers.should.have.length(3);
+			aContainers[0].should.eql(containers[3]);
+			aContainers[1].should.eql(containers[1]);
+			aContainers[2].should.eql(containers[2]);
 		});
 	});
 
@@ -355,15 +363,13 @@ describe('Rackit', function () {
 			rackit.options.prefix = container.replace(/\d+$/, '');
 
 			// Assert that the container exists, and is not to capacity
-			rackit.hContainers.should.have.property(container);
-
-			var count = rackit.hContainers[container].count;
-			count.should.be.below(50000);
-			return count;
+			var _container = _.find(rackit.aContainers, { name : container });
+			_container.count.should.be.below(50000);
+			return _container.count;
 		}
 
 		// Asserts that a successful file upload occured.
-		function assertAdd(container, count, cb) {
+		function assertAdd(sContainer, count, cb) {
 			return function (err, cloudpath) {
 				if ( err ) {
 					console.log(err);
@@ -374,13 +380,14 @@ describe('Rackit', function () {
 				should.exist(cloudpath);
 
 				// Assert the container exists
-				rackit.hContainers.should.have.property(container);
+				var container = _.find(rackit.aContainers, { name : sContainer });
+				should.exist(container);
 
 				// Assert the file was added to the expected container
-				cloudpath.split('/')[0].should.equal(container);
+				cloudpath.split('/')[0].should.equal(sContainer);
 
 				// Assert the containers file count is as expected
-				rackit.hContainers[container].count.should.equal(count);
+				container.count.should.equal(count);
 
 				// Execute the callback for additonal asserts
 				cb && cb();
@@ -391,6 +398,7 @@ describe('Rackit', function () {
 		beforeEach(function (cb) {
 			superNock.typicalResponse();
 			rackit = new Rackit(rackitOptions);
+			rackit.options.prefix = 'empty';
 			rackit.init(function (err) {
 				superNock.allDone();
 				cb(err);
@@ -575,7 +583,7 @@ describe('Rackit', function () {
 				rackit.options.useCDN = false;
 
 				// Assert that the container does not exist
-				rackit.hContainers.should.not.have.property(container);
+				should.not.exist(_.find(rackit.aContainers, { name : container }));
 
 				// Add on the mock for the add request
 				superNock
@@ -597,7 +605,7 @@ describe('Rackit', function () {
 				rackit.options.useCDN = false;
 
 				// Assert that the container does not exist
-				rackit.hContainers.should.not.have.property(container);
+				should.not.exist(_.find(rackit.aContainers, { name : container }));
 
 				// Add on the mock for the add request
 				superNock
@@ -623,7 +631,7 @@ describe('Rackit', function () {
 				rackit.options.useCDN = true;
 
 				// Assert that the container does not exist
-				rackit.hContainers.should.not.have.property(container);
+				should.not.exist(_.find(rackit.aContainers, { name : container }));
 
 				// Add on the mock for the add request
 				superNock
@@ -646,7 +654,7 @@ describe('Rackit', function () {
 				rackit.options.useCDN = true;
 
 				// Assert that the container does not exist
-				rackit.hContainers.should.not.have.property(container);
+				should.not.exist(_.find(rackit.aContainers, { name : container }));
 
 				// Add on the mock for the add request
 				superNock
@@ -672,7 +680,7 @@ describe('Rackit', function () {
 				rackit.options.useCDN = false;
 
 				// Assert that the container does not exist
-				rackit.hContainers.should.not.have.property(container);
+				should.not.exist(_.find(rackit.aContainers, { name : container }));
 
 				// Setup the nock with two add operations
 				superNock
@@ -696,10 +704,11 @@ describe('Rackit', function () {
 					should.exist(cloudpaths.two);
 
 					// Assert the container was created
-					rackit.hContainers.should.have.property(container);
+					var _container = _.find(rackit.aContainers, { name : container });
+					should.exist(_container);
 
 					// Assert the container count
-					rackit.hContainers[container].count.should.equal(2);
+					_container.count.should.equal(2);
 
 					// Assert the file was added to the expected container
 					cloudpaths.one.split('/')[0].should.equal(container);
@@ -717,7 +726,7 @@ describe('Rackit', function () {
 				rackit.options.useCDN = false;
 
 				// Assert that the container does not exist
-				rackit.hContainers.should.not.have.property(container);
+				should.not.exist(_.find(rackit.aContainers, { name : container }));
 
 				// Setup the nock with two add operations
 				superNock
@@ -741,10 +750,11 @@ describe('Rackit', function () {
 					should.exist(cloudpaths.two);
 
 					// Assert the container was created
-					rackit.hContainers.should.have.property(container);
+					var _container = _.find(rackit.aContainers, { name : container });
+					should.exist(_container);
 
 					// Assert the container count
-					rackit.hContainers[container].count.should.equal(2);
+					_container.count.should.equal(2);
 
 					// Assert the file was added to the expected container
 					cloudpaths.one.split('/')[0].should.equal(container);
