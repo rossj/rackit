@@ -246,15 +246,15 @@ describe('Rackit', function () {
 				should.not.exist(err);
 
 				// Check the storage container cache
-				rackit.aContainers.should.have.length(7);
-				for ( i = 0; i < rackit.aContainers.length; i++ ) {
-					rackit.aContainers[i].should.eql(containers.aContainers[i]);
+				rackit.aContainers.should.have.length(superNock.aContainers.length);
+				for ( i = 0; i < superNock.aContainers.length; i++ ) {
+					rackit.aContainers[i].should.eql(superNock.aContainers[i]);
 				}
 
 				// Check the CDN container cache
 				rackit.aCDNContainers.should.have.length(superNock.aCDNContainers.length);
 				for ( i = 0; i < superNock.aCDNContainers.length; i++ ) {
-					rackit.hCDNContainers.should.have.ownProperty(superNock.aCDNContainers[i].name);
+					rackit.aCDNContainers[i].should.eql(superNock.aCDNContainers[i]);
 				}
 
 				superNock.allDone();
@@ -592,7 +592,8 @@ describe('Rackit', function () {
 
 				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is not CDN enabled
-					rackit.hCDNContainers.should.not.have.property(container);
+					var _container = _.find(rackit.aCDNContainers, { name : container });
+					should.not.exist(_container);
 					cb();
 				}));
 			});
@@ -614,7 +615,8 @@ describe('Rackit', function () {
 
 				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is not CDN enabled
-					rackit.hCDNContainers.should.not.have.property(container);
+					var _container = _.find(rackit.aCDNContainers, { name : container });
+					should.not.exist(_container);
 					cb();
 				}));
 			});
@@ -641,7 +643,8 @@ describe('Rackit', function () {
 
 				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is CDN enabled
-					rackit.hCDNContainers.should.have.property(container);
+					var _container = _.find(rackit.aCDNContainers, { name : container });
+					should.exist(_container);
 					cb();
 				}));
 			});
@@ -664,7 +667,8 @@ describe('Rackit', function () {
 
 				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is CDN enabled
-					rackit.hCDNContainers.should.have.property(container);
+					var _container = _.find(rackit.aCDNContainers, { name : container });
+					should.exist(_container);
 					cb();
 				}));
 			});
