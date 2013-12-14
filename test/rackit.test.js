@@ -162,20 +162,23 @@ describe('Rackit', function () {
 			rackit.should.be.an['instanceof'](Rackit);
 			rackit.options.prefix.should.equal('dev');
 			rackit.options.useCDN.should.equal(true);
-			rackit.options.region.should.equal('US');
-			rackit.options.baseURIs['US'].should.equal('https://auth.api.rackspacecloud.com/v1.0');
-			rackit.options.baseURIs['UK'].should.equal('https://lon.auth.api.rackspacecloud.com/v1.0');
+			rackit.options.region.should.equal('');
+			rackit.options.authRegion.should.equal('US');
+			rackit.options.authURIs['US'].should.equal('https://identity.api.rackspacecloud.com/v2.0');
+			rackit.options.authURIs['UK'].should.equal('https://lon.identity.api.rackspacecloud.com/v2.0');
 		});
 
 		it('should allow overriding of default options', function () {
 			var rackit = new Rackit({
 				pre : 'dep',
-				useCDN : false
+				useCDN : false,
+				region : 'LON'
 			});
 			rackit.options.pre.should.equal('dep');
 			rackit.options.useCDN.should.equal(false);
+			rackit.options.region.should.equal('LON');
 			// Check non-overridden options are still there
-			rackit.options.region.should.equal('US');
+			rackit.options.authRegion.should.equal('US');
 		});
 	});
 
@@ -193,19 +196,20 @@ describe('Rackit', function () {
 
 		it('should return an error when bad credentials are given', function (cb) {
 			// Setup nock to respond to bad auth request
-			var defaultOptions = Rackit.defaultOptions;
-			var path = url.parse(defaultOptions.baseURIs[defaultOptions.region]).pathname;
-			var scope = nock(defaultOptions.baseURIs[defaultOptions.region]).get(path).reply(401, 'Unauthorized');
+			var username = rackitOptions.user + 'blahblah';
+			var apiKey = rackitOptions.key + 'bloopidy';
+
+			superNock.auth(username, apiKey);
 
 			var rackit = new Rackit({
-				user : rackitOptions.user + 'blahblah',
-				key : rackitOptions.key + 'bloopidy',
+				user : username,
+				key : apiKey,
 				tempURLKey : rackitOptions.tempURLKey
 			});
 			rackit.init(function (err) {
 				should.exist(err);
 				err.should.be.an['instanceof'](Error);
-				scope.done();
+				superNock.allDone();
 				cb();
 			});
 		});

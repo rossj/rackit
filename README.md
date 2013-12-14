@@ -55,7 +55,8 @@ When initializing Rackit, here are the options and defaults:
 	user : '', // Your Rackspace username
 	key : '', // Your Rackspace API key
 	prefix : 'dev', // The prefix for your Cloud Files containers (may contain forward slash)
-	region : 'US', // Determines the API entry point - other option of 'UK'
+	authRegion : 'US', // Specifies the authentication API entry point - other option of 'UK'
+	region : '', // Specifies the geographic datacenter to prefer - defaults to the user's default region. Explicit options of 'ORD', 'DFW', 'HKG', 'LON', 'IAD', 'SYD' are accepted.
 	tempURLKey : null, // A secret for generating temporary URLs
 	useSNET : false,
 	useCDN : true,

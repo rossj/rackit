@@ -10,20 +10,22 @@ var
 // Npm modules
 	nock = require('nock');
 
+
+var authResponse = require('./auth-response.json');
 var Rackit = require('../lib/main.js').Rackit;
 
 var mockOptions = {
-	storage : 'https://storage.blablah.com/v1/blah',
-	cdn : 'https://cdn.blablah.com/v1/blah',
-	token : 'boopitybopitydadabop'
+	storage : 'https://storage101.dfw1.clouddrive.com/v1/MossoCloudFS_aaaaaaaa-bbbb-cccc-dddd-eeeeeeee',
+	cdn : 'https://cdn1.clouddrive.com/v1/MossoCloudFS_aaaaaaaa-bbbb-cccc-dddd-eeeeeeee',
+	token : authResponse.access.token.id
 };
 
 var Mock = module.exports = function (rackitOptions, aContainers, aCDNContainers) {
 	this.rackitOptions = Object.create(Rackit.defaultOptions);
 
 	// Override the default options
-	for (var prop in rackitOptions) {
-		if (rackitOptions.hasOwnProperty(prop)) {
+	for ( var prop in rackitOptions ) {
+		if ( rackitOptions.hasOwnProperty(prop) ) {
 			this.rackitOptions[prop] = rackitOptions[prop];
 		}
 	}
@@ -35,24 +37,31 @@ var Mock = module.exports = function (rackitOptions, aContainers, aCDNContainers
 
 Mock.prototype = {
 	typicalResponse : function () {
-		this.auth().storage().CDN();
-		if (this.rackitOptions.tempURLKey)
+		this.auth(this.rackitOptions.user, this.rackitOptions.key).storage().CDN();
+		if ( this.rackitOptions.tempURLKey )
 			this.tempURL(this.rackitOptions.tempURLKey);
 
 		return this;
 	},
-	auth : function () {
+	auth : function (username, apiKey) {
 		// Setup nock to respond to a good auth request, twice
-		var path = url.parse(this.rackitOptions.baseURIs[this.rackitOptions.region]).pathname;
-		var scope = nock(this.rackitOptions.baseURIs[this.rackitOptions.region])
-			.get(path)
-			.matchHeader('X-Auth-User', this.rackitOptions.user)
-			.matchHeader('X-Auth-Key', this.rackitOptions.key)
-			.reply(204, 'No Content', {
-				'x-storage-url' : mockOptions.storage,
-				'x-cdn-management-url' : mockOptions.cdn,
-				'x-auth-token' : mockOptions.token
+		var authURI = this.rackitOptions.authURIs[this.rackitOptions.authRegion];
+		var path = url.parse(authURI).pathname + '/tokens';
+		var scope = nock(authURI)
+			.post(path, {
+				"auth" : {
+					"RAX-KSKEY:apiKeyCredentials" : {
+						"username" : username,
+						"apiKey" : apiKey
+					}
+				}
 			});
+
+		if (username != this.rackitOptions.user || apiKey != this.rackitOptions.key) {
+			scope = scope.reply(401);
+		} else {
+			scope = scope.reply(200, authResponse);
+		}
 
 		this.scopes.push(scope);
 		return this;
@@ -111,12 +120,12 @@ Mock.prototype = {
 			.filteringPath(new RegExp(container + '/.*', 'g'), container + '/filename');
 
 		// If data was specified, match it exactly
-		if (typeof data !==  'undefined') {
+		if ( typeof data !== 'undefined' ) {
 			scope = scope.put(path, data);
 		} else {
 			// Data wasn't specified, so match anything
 			scope = scope
-				.filteringRequestBody(function() {
+				.filteringRequestBody(function () {
 					return '*';
 				})
 				.put(path, '*');
