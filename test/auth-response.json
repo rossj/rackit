@@ -2,11 +2,15 @@
 	"access" : {
 		"token" : {
 			"expires" : "2011-12-08T22:51:02.000-06:00",
-			"id" : "vvvvvvvv-wwww-xxxx-yyyy-zzzzzzzzzzzz"
+			"id" : "vvvvvvvv-wwww-xxxx-yyyy-zzzzzzzzzzzz",
+			"tenant" : {
+				"id" : "123456",
+				"name" : "123456"
+			}
 		},
 		"user" : {
 			"id" : "123456",
-			"name" : "jsmith",
+			"name" : "boopity",
 			"RAX-AUTH:defaultRegion" : "DFW",
 			"roles" : [
 				{

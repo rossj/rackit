@@ -63,14 +63,14 @@ var containers = {
 					hash : 'randomhash',
 					bytes : 1000,
 					content_type : 'application\/octet-stream',
-					last_modified : '2012-1-01T00:00:0.0'
+					last_modified : '2013-12-14T00:05:20.908090'
 				},
 				{
 					name : 'obj2',
 					hash : 'randomhash',
 					bytes : 1000,
 					content_type : 'application\/octet-stream',
-					last_modified : '2012-1-01T00:00:0.0'
+					last_modified : '2013-12-14T00:05:20.908090'
 				}
 			]
 		},
@@ -84,21 +84,21 @@ var containers = {
 					hash : 'randomhash',
 					bytes : 1000,
 					content_type : 'application\/octet-stream',
-					last_modified : '2012-1-01T00:00:0.0'
+					last_modified : '2013-12-14T00:05:20.908090'
 				},
 				{
 					name : 'obj2',
 					hash : 'randomhash',
 					bytes : 1000,
 					content_type : 'application\/octet-stream',
-					last_modified : '2012-1-01T00:00:0.0'
+					last_modified : '2013-12-14T00:05:20.908090'
 				},
 				{
 					name : 'obj3',
 					hash : 'randomhash',
 					bytes : 1000,
 					content_type : 'application\/octet-stream',
-					last_modified : '2012-1-01T00:00:0.0'
+					last_modified : '2013-12-14T00:05:20.908090'
 				}
 			]
 		},
@@ -112,14 +112,14 @@ var containers = {
 					hash : 'randomhash',
 					bytes : 1000,
 					content_type : 'application\/octet-stream',
-					last_modified : '2012-1-01T00:00:0.0'
+					last_modified : '2013-12-14T00:05:20.908090'
 				},
 				{
 					name : 'obj5',
 					hash : 'randomhash',
 					bytes : 1000,
 					content_type : 'application\/octet-stream',
-					last_modified : '2012-1-01T00:00:0.0'
+					last_modified : '2013-12-14T00:05:20.908090'
 				}
 			]
 		},
@@ -248,13 +248,17 @@ describe('Rackit', function () {
 				// Check the storage container cache
 				rackit.aContainers.should.have.length(superNock.aContainers.length);
 				for ( i = 0; i < superNock.aContainers.length; i++ ) {
-					rackit.aContainers[i].should.eql(superNock.aContainers[i]);
+					rackit.aContainers[i].should.have.property('name', superNock.aContainers[i].name);
+					rackit.aContainers[i].should.have.property('count', superNock.aContainers[i].count);
+					rackit.aContainers[i].should.have.property('bytes', superNock.aContainers[i].bytes);
 				}
 
 				// Check the CDN container cache
 				rackit.aCDNContainers.should.have.length(superNock.aCDNContainers.length);
 				for ( i = 0; i < superNock.aCDNContainers.length; i++ ) {
-					rackit.aCDNContainers[i].should.eql(superNock.aCDNContainers[i]);
+					rackit.aCDNContainers[i].should.have.property('name', superNock.aCDNContainers[i].name);
+					rackit.aCDNContainers[i].should.have.property('cdnUri', superNock.aCDNContainers[i].cdn_uri);
+					rackit.aCDNContainers[i].should.have.property('cdnSslUri', superNock.aCDNContainers[i].cdn_ssl_uri);
 				}
 
 				superNock.allDone();
@@ -918,10 +922,10 @@ describe('Rackit', function () {
 					objects.push({
 						cloudpath : container.name + '/' + object.name,
 						name : object.name,
-						hash : object.hash,
+						etag : object.hash,
 						bytes : object.bytes,
-						content_type : object.content_type,
-						last_modified : object.last_modified
+						contentType : object.content_type,
+						lastModified : new Date(object.last_modified)
 					});
 				}
 			}
@@ -1053,7 +1057,10 @@ describe('Rackit', function () {
 
 				// Check the result contents
 				for ( var i = 0; i < objects.length; i++ ) {
-					list.should.includeEql(objects[i]);
+					for ( var p in objects[i] ) {
+						list[i].should.have.property(p);
+						list[i][p].should.eql(objects[i][p]);
+					}
 				}
 
 				cb();

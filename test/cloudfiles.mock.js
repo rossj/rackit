@@ -47,6 +47,7 @@ Mock.prototype = {
 		// Setup nock to respond to a good auth request, twice
 		var authURI = this.rackitOptions.authURIs[this.rackitOptions.authRegion];
 		var path = url.parse(authURI).pathname + '/tokens';
+
 		var scope = nock(authURI)
 			.post(path, {
 				"auth" : {
@@ -55,11 +56,16 @@ Mock.prototype = {
 						"apiKey" : apiKey
 					}
 				}
-			});
+			})
+			.times(2);
 
 		if (username != this.rackitOptions.user || apiKey != this.rackitOptions.key) {
 			scope = scope.reply(401);
 		} else {
+			// set the "expires" property of authResponse
+			var expires = new Date();
+			expires.setHours(expires.getHours()+1);
+			authResponse.access.token.expires = expires.toISOString();
 			scope = scope.reply(200, authResponse);
 		}
 
@@ -196,7 +202,7 @@ Mock.prototype = {
 
 			// If the container has no objects, respond with 204.
 			if ( !container.objects || container.objects.length === 0 ) {
-				scope.get(basepath).reply(204);
+				scope.get(basepath).reply(200, []);
 				continue;
 			}
 
