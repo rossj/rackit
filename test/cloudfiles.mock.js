@@ -163,6 +163,14 @@ Mock.prototype = {
 		this.scopes.push(scope);
 		return this;
 	},
+	remove : function (cloudpath, response) {
+		var path = url.parse(mockOptions.storage).pathname + '/' + cloudpath;
+		var scope = nock(mockOptions.storage)
+			.delete(path)
+			.reply(response);
+		this.scopes.push(scope);
+		return this;
+	},
 	createContainer : function (container) {
 		var path = url.parse(mockOptions.storage).pathname + '/' + container;
 		var scope = nock(mockOptions.storage)
