@@ -823,6 +823,73 @@ describe('Rackit', function () {
 		});
 	});
 
+	describe('#remove', function () {
+		var rackit;
+
+		beforeEach(function (cb) {
+			superNock.typicalResponse();
+			rackit = new Rackit(rackitOptions);
+			rackit.init(function (err) {
+				superNock.allDone();
+				cb(err);
+			});
+		});
+
+		it('should send a "delete" request to Cloud Files', function (cb) {
+			var cloudpath = 'multiple0/obj2';
+			superNock.remove(cloudpath, 204);
+
+			// Get the file
+			rackit.remove(cloudpath, function (err) {
+				superNock.allDone();
+				should.not.exist(err);
+				cb();
+			});
+		});
+
+		it('should decrement the internal container count by 1', function (cb) {
+			var cloudpath = 'multiple0/obj2';
+			superNock.remove(cloudpath, 204);
+
+			// Get the file
+			rackit.remove(cloudpath, function (err) {
+				superNock.allDone();
+				should.not.exist(err);
+
+				var _container = _.find(rackit.aContainers, { name : 'multiple0' });
+				_container.count.should.equal(2);
+				cb();
+			});
+		});
+
+		it('should return an error if file does not exist', function (cb) {
+			var cloudpath = 'multiple0/objFake';
+			superNock.remove(cloudpath, 404);
+
+			// Get the file
+			rackit.remove(cloudpath, function (err) {
+				superNock.allDone();
+				should.exist(err);
+				err.should.be.an.instanceOf(Error);
+				cb();
+			});
+		});
+
+		it('should not decrement the internal container count if file does not exist', function (cb) {
+			var cloudpath = 'multiple0/objFake';
+			superNock.remove(cloudpath, 404);
+
+			// Get the file
+			rackit.remove(cloudpath, function (err) {
+				superNock.allDone();
+
+				var _container = _.find(rackit.aContainers, { name : 'multiple0' });
+				_container.count.should.equal(3);
+				cb();
+			});
+		});
+	});
+
 	describe('#getCloudpath', function () {
 		var rackit;
 
