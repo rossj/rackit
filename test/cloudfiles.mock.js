@@ -155,6 +155,27 @@ Mock.prototype = {
 		this.scopes.push(scope);
 		return this;
 	},
+	head : function (cloudpath, response, headers) {
+		var path = url.parse(mockOptions.storage).pathname + '/' + cloudpath + '?format=json';
+		var scope = nock(mockOptions.storage)
+			.head(path)
+			.reply(response, '', headers);
+		this.scopes.push(scope);
+		return this;
+	},
+	post : function (cloudpath, response, headers) {
+		var path = url.parse(mockOptions.storage).pathname + '/' + cloudpath;
+		var scope = nock(mockOptions.storage)
+			.post(path);
+
+		for (var key in headers) {
+			scope = scope.matchHeader(key, headers[key]);
+		}
+
+		scope = scope.reply(response);
+		this.scopes.push(scope);
+		return this;
+	},
 	get : function (cloudpath, data) {
 		var path = url.parse(mockOptions.storage).pathname + '/' + cloudpath;
 		var scope = nock(mockOptions.storage)

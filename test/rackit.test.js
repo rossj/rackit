@@ -247,7 +247,7 @@ describe('Rackit', function () {
 
 				// Check the storage container cache
 				rackit.aContainers.should.have.length(superNock.aContainers.length);
-				for ( i = 0; i < superNock.aContainers.length; i++ ) {
+				for (i = 0; i < superNock.aContainers.length; i++) {
 					rackit.aContainers[i].should.have.property('name', superNock.aContainers[i].name);
 					rackit.aContainers[i].should.have.property('count', superNock.aContainers[i].count);
 					rackit.aContainers[i].should.have.property('bytes', superNock.aContainers[i].bytes);
@@ -255,7 +255,7 @@ describe('Rackit', function () {
 
 				// Check the CDN container cache
 				rackit.aCDNContainers.should.have.length(superNock.aCDNContainers.length);
-				for ( i = 0; i < superNock.aCDNContainers.length; i++ ) {
+				for (i = 0; i < superNock.aCDNContainers.length; i++) {
 					rackit.aCDNContainers[i].should.have.property('name', superNock.aCDNContainers[i].name);
 					rackit.aCDNContainers[i].should.have.property('cdnUri', superNock.aCDNContainers[i].cdn_uri);
 					rackit.aCDNContainers[i].should.have.property('cdnSslUri', superNock.aCDNContainers[i].cdn_ssl_uri);
@@ -375,7 +375,7 @@ describe('Rackit', function () {
 		// Asserts that a successful file upload occured.
 		function assertAdd(sContainer, count, cb) {
 			return function (err, cloudpath) {
-				if ( err ) {
+				if (err) {
 					console.log(err);
 				}
 
@@ -890,6 +890,116 @@ describe('Rackit', function () {
 		});
 	});
 
+	describe('#setMeta', function () {
+		var rackit;
+
+		before(function (cb) {
+			superNock.typicalResponse();
+			rackit = new Rackit(rackitOptions);
+			rackit.init(function (err) {
+				superNock.allDone();
+				cb(err);
+			});
+		});
+
+		it('should return an error if file does not exist', function (cb) {
+			var cloudpath = 'multiple0/objFake';
+			superNock.post(cloudpath, 404);
+
+			rackit.setMeta(cloudpath, {}, function (err) {
+				superNock.allDone();
+				should.exist(err);
+				err.should.be.an.instanceOf(Error);
+				cb();
+			});
+		});
+
+		it('should post fields as prefixed headers', function (cb) {
+			var cloudpath = 'multiple0/obj1';
+			superNock.post(cloudpath, 202, {
+				'X-Object-Meta-meatOne' : 'Bacon1',
+				'X-Object-Meta-MeatTwo' : 'Bacon2 yum yum!'
+			});
+
+			rackit.setMeta(cloudpath, {
+				meatOne : 'Bacon1',
+				MeatTwo : 'Bacon2 yum yum!'
+			}, function (err) {
+				superNock.allDone();
+				should.not.exist(err);
+				cb();
+			});
+		});
+
+		it('should post with no headers if empty object given', function (cb) {
+			var cloudpath = 'multiple0/obj1';
+			superNock.post(cloudpath, 202);
+
+			rackit.setMeta(cloudpath, {}, function (err) {
+				superNock.allDone();
+				should.not.exist(err);
+				cb();
+			});
+		});
+	});
+
+	describe('#getMeta', function () {
+		var rackit;
+
+		before(function (cb) {
+			superNock.typicalResponse();
+			rackit = new Rackit(rackitOptions);
+			rackit.init(function (err) {
+				superNock.allDone();
+				cb(err);
+			});
+		});
+
+		it('should return an error if file does not exist', function (cb) {
+			var cloudpath = 'multiple0/objFake';
+			superNock.head(cloudpath, 404);
+
+			rackit.getMeta(cloudpath, function (err, metadata) {
+				superNock.allDone();
+				should.exist(err);
+				err.should.be.an.instanceOf(Error);
+				cb();
+			});
+		});
+
+		it('should return hash of metadata fields', function (cb) {
+			var cloudpath = 'multiple0/obj1';
+			superNock.head(cloudpath, 200, {
+				'X-Object-Meta-meatOne' : 'Bacon1',
+				'X-Object-Meta-MeatTwo' : 'Bacon2 yum yum!'
+			});
+
+			rackit.getMeta(cloudpath, function (err, metadata) {
+				superNock.allDone();
+				should.not.exist(err);
+				should.exist(metadata);
+				metadata.should.eql({
+					meatone : 'Bacon1',
+					meattwo : 'Bacon2 yum yum!'
+				});
+				cb();
+			});
+		});
+
+		it('should return empty object in case of no metadata', function (cb) {
+			var cloudpath = 'multiple0/obj1';
+			superNock.head(cloudpath, 200);
+
+			rackit.getMeta(cloudpath, function (err, metadata) {
+				superNock.allDone();
+				should.not.exist(err);
+				should.exist(metadata);
+				metadata.should.eql({});
+				cb();
+			});
+		});
+	});
+
 	describe('#getCloudpath', function () {
 		var rackit;
 
@@ -976,15 +1086,15 @@ describe('Rackit', function () {
 			var i, j, container, object, objects = [];
 
 			// Find the actual container objects to validate
-			for ( i = 0; i < containers.length; i++ ) {
+			for (i = 0; i < containers.length; i++) {
 				container = containers[i];
 
 				// If the container doesn't have any objects, skip it
-				if ( !container.objects || !container.objects.length )
+				if (!container.objects || !container.objects.length)
 					continue;
 
 				// Iterate each object in this container, adding the container to the object name
-				for ( j = 0; j < container.objects.length; j++ ) {
+				for (j = 0; j < container.objects.length; j++) {
 					object = container.objects[j];
 					objects.push({
 						cloudpath : container.name + '/' + object.name,
@@ -1001,7 +1111,7 @@ describe('Rackit', function () {
 
 		function getObjectCloudpaths(objects) {
 			var i = objects.length;
-			while ( i-- )
+			while (i--)
 				objects[i] = objects[i].cloudpath;
 
 			return objects;
@@ -1026,7 +1136,7 @@ describe('Rackit', function () {
 				list.should.have.length(objects.length);
 
 				// Check the result contents
-				for ( var i = 0; i < objects.length; i++ ) {
+				for (var i = 0; i < objects.length; i++) {
 					list.should.include(objects[i]);
 				}
 
@@ -1123,8 +1233,8 @@ describe('Rackit', function () {
 				list.should.have.length(objects.length);
 
 				// Check the result contents
-				for ( var i = 0; i < objects.length; i++ ) {
-					for ( var p in objects[i] ) {
+				for (var i = 0; i < objects.length; i++) {
+					for (var p in objects[i]) {
 						list[i].should.have.property(p);
 						list[i][p].should.eql(objects[i][p]);
 					}
