@@ -120,7 +120,7 @@ Mock.prototype = {
 		this.scopes.push(scope);
 		return this;
 	},
-	add : function (container, data, type, chunked) {
+	add : function (container, data, type, length) {
 		var path = url.parse(mockOptions.storage).pathname + '/' + container + '/filename';
 		var scope = nock(mockOptions.storage)
 			.filteringPath(new RegExp(container + '/.*', 'g'), container + '/filename');
@@ -142,12 +142,11 @@ Mock.prototype = {
 			.matchHeader('Content-Type', type)
 			.matchHeader('ETag', undefined);
 
-		if ( chunked ) {
+		if ( !length ) {
 			scope.matchHeader('Transfer-Encoding', 'chunked');
 		} else {
 			// If data was specified and non-chunked encoding, ensure the content-length is correct
-			var lengthMatch = typeof data === 'undefined' ? /.*/ : '' + Buffer.byteLength(data);
-			scope.matchHeader('Content-Length', lengthMatch);
+			scope.matchHeader('Content-Length', length);
 		}
 
 		scope = scope.reply(201);
@@ -210,6 +209,31 @@ Mock.prototype = {
 			.reply(201);
 
 		this.scopes.push(scope);
+
+		// pkgcloud refreshes container info after CDN enabling
+		path = url.parse(mockOptions.storage).pathname + '/' + container;
+		scope = nock(mockOptions.storage)
+			.head(path)
+			.matchHeader('X-Auth-Token', mockOptions.token)
+			.reply(204, '', {
+				'X-Container-Bytes-Used' : 0,
+				'X-Container-Object-Count' : 0
+			});
+
+		this.scopes.push(scope);
+
+		// pkgcloud refreshes cdn container info after CDN enabling
+		path = url.parse(mockOptions.cdn).pathname + '/' + container;
+		scope = nock(mockOptions.cdn)
+			.head(path)
+			.matchHeader('X-Auth-Token', mockOptions.token)
+			.reply(204, '', {
+				'X-Cdn-Enabled' : 'True',
+				'X-Log-Retention' : 'False'
+			});
+
+		this.scopes.push(scope);
+
 		return this;
 	},
 	list : function (prefix, limit) {
