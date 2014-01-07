@@ -56,8 +56,7 @@ Mock.prototype = {
 						"apiKey" : apiKey
 					}
 				}
-			})
-			.times(2);
+			});
 
 		if (username != this.rackitOptions.user || apiKey != this.rackitOptions.key) {
 			scope = scope.reply(401);
