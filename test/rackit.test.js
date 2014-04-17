@@ -19,6 +19,7 @@ var
 	CloudFilesMock = require('./cloudfiles.mock.js');
 
 var rackitOptions = {
+	region : 'DFW',
 	user : 'boopity',
 	key : 'bop',
 	tempURLKey : '3522d2sa'
@@ -158,12 +159,19 @@ describe('Rackit', function () {
 
 	describe('Constructor', function () {
 
+		it('should throw an error if no region given', function () {
+			(function() {
+				var rackit = new Rackit({});
+			}).should.throw();
+		});
+
 		it('should have default options', function () {
-			var rackit = new Rackit();
+			var rackit = new Rackit({
+				region : 'DFW'
+			});
 			rackit.should.be.an['instanceof'](Rackit);
 			rackit.options.prefix.should.equal('dev');
 			rackit.options.useCDN.should.equal(true);
-			rackit.options.region.should.equal('');
 			rackit.options.authRegion.should.equal('US');
 			rackit.options.authURIs['US'].should.equal('https://identity.api.rackspacecloud.com/v2.0');
 			rackit.options.authURIs['UK'].should.equal('https://lon.identity.api.rackspacecloud.com/v2.0');
@@ -171,9 +179,9 @@ describe('Rackit', function () {
 
 		it('should allow overriding of default options', function () {
 			var rackit = new Rackit({
+				region : 'LON',
 				pre : 'dep',
-				useCDN : false,
-				region : 'LON'
+				useCDN : false
 			});
 			rackit.options.pre.should.equal('dep');
 			rackit.options.useCDN.should.equal(false);
@@ -186,7 +194,9 @@ describe('Rackit', function () {
 	describe('#init', function () {
 
 		it('should return an error when no credentials are given', function (cb) {
-			var rackit = new Rackit();
+			var rackit = new Rackit({
+				region : 'DFW'
+			});
 			rackit.init(function (err) {
 				should.exist(err);
 				err.should.be.an['instanceof'](Error);
@@ -203,6 +213,7 @@ describe('Rackit', function () {
 			superNock.auth(username, apiKey);
 
 			var rackit = new Rackit({
+				region : 'LON',
 				user : username,
 				key : apiKey,
 				tempURLKey : rackitOptions.tempURLKey
@@ -216,10 +227,12 @@ describe('Rackit', function () {
 		});
 
 		it('should not return an error with good credentials', function (cb) {
+			this.timeout(10000);
 			superNock.typicalResponse();
 
 			var rackit = new Rackit(rackitOptions);
 			rackit.init(function (err) {
+				if (err) cb(err);
 				should.not.exist(err);
 				superNock.allDone();
 				cb();
@@ -376,10 +389,6 @@ describe('Rackit', function () {
 		// Asserts that a successful file upload occured.
 		function assertAdd(sContainer, count, cb) {
 			return function (err, cloudpath) {
-				if (err) {
-					console.log(err);
-				}
-
 				superNock.allDone();
 				should.not.exist(err);
 				should.exist(cloudpath);

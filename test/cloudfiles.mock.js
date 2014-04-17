@@ -119,10 +119,23 @@ Mock.prototype = {
 		this.scopes.push(scope);
 		return this;
 	},
-	add : function (container, data, type, length) {
+	addAndRemove : function (container, data, type, length) {
+		var that = this;
+		this.add(container, data, type, length, function(path) {
+			var r = new RegExp(container + '/.*', 'g');
+			var result = path.match(r)[0];
+			that.remove(result);
+		});
+	},
+	add : function (container, data, type, length, cb) {
 		var path = url.parse(mockOptions.storage).pathname + '/' + container + '/filename';
+		var lastPath;
 		var scope = nock(mockOptions.storage)
-			.filteringPath(new RegExp(container + '/.*', 'g'), container + '/filename');
+			.filteringPath(function(path) {
+				lastPath = path;
+				var r = new RegExp(container + '/.*', 'g');
+				return path.replace(r, container + '/filename');
+			});
 
 		// If data was specified, match it exactly
 		if ( typeof data !== 'undefined' ) {
@@ -148,7 +161,9 @@ Mock.prototype = {
 			scope.matchHeader('Content-Length', length);
 		}
 
-		scope = scope.reply(201);
+		scope = scope.reply(201, function(uri, requestBody) {
+			cb && cb(lastPath);
+		});
 
 		this.scopes.push(scope);
 		return this;
@@ -183,10 +198,16 @@ Mock.prototype = {
 		return this;
 	},
 	remove : function (cloudpath, response) {
-		var path = url.parse(mockOptions.storage).pathname + '/' + cloudpath;
-		var scope = nock(mockOptions.storage)
-			.delete(path)
-			.reply(response);
+		var path = url.parse(mockOptions.storage).pathname + '/' + (cloudpath || 'cloudpath');
+		var scope = nock(mockOptions.storage);
+
+		if (!cloudpath)
+			scope = scope.filteringPath(function(path) {
+				path = path.replace(/\/\w*\/\w*$/g, '/cloudpath');
+				return path;
+			});
+
+		scope = scope.delete(path).reply(response);
 		this.scopes.push(scope);
 		return this;
 	},
