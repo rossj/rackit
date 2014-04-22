@@ -47,7 +47,7 @@ var containers = {
 		},
 		{
 			name : 'full0',
-			count : 50000,
+			count : 100000000,
 			bytes : 12000
 		},
 		{
@@ -382,7 +382,7 @@ describe('Rackit', function () {
 
 			// Assert that the container exists, and is not to capacity
 			var _container = _.find(rackit.aContainers, { name : container });
-			_container.count.should.be.below(50000);
+			_container.count.should.be.below(100000000);
 			return _container.count;
 		}
 
