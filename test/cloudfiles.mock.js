@@ -5,6 +5,7 @@
 
 var
 // Node modules
+	_ = require('lodash'),
 	url = require('url'),
 
 // Npm modules
@@ -37,7 +38,7 @@ var Mock = module.exports = function (rackitOptions, aContainers, aCDNContainers
 
 Mock.prototype = {
 	typicalResponse : function () {
-		this.auth(this.rackitOptions.user, this.rackitOptions.key).storage().CDN();
+		this.auth(this.rackitOptions.user, this.rackitOptions.key);
 		if ( this.rackitOptions.tempURLKey )
 			this.tempURL(this.rackitOptions.tempURLKey);
 
@@ -81,12 +82,42 @@ Mock.prototype = {
 		this.scopes.push(scope);
 		return this;
 	},
+	containerHead : function (containers) {
+		var i;
+		for ( i = 0; i < containers.length; i++ ) {
+			this.storageHead(containers[i]);
+			// if the regular container exists, pkgcloud will then request CDN info
+			if ( _.find(this.aContainers, { name : containers[i] }) )
+				this.CDNHead(containers[i]);
+		}
+
+		return this;
+	},
 	storage : function () {
 		var path = url.parse(mockOptions.storage).pathname + '?format=json';
 		var scope = nock(mockOptions.storage)
 			.get(path)
 			.matchHeader('X-Auth-Token', mockOptions.token)
 			.reply(200, JSON.stringify(this.aContainers));
+
+		this.scopes.push(scope);
+		return this;
+	},
+	storageHead : function (container) {
+		var _container = _.find(this.aContainers, { name : container });
+		var path = url.parse(mockOptions.storage).pathname + '/' + container;
+		var scope = nock(mockOptions.storage)
+			.head(path)
+			.matchHeader('X-Auth-Token', mockOptions.token);
+
+		if ( _container ) {
+			scope = scope.reply(204, '', {
+				'X-Container-Object-Count' : _container.count,
+				'X-Container-Bytes-Used' : _container.bytes
+			});
+		} else {
+			scope = scope.reply(404);
+		}
 
 		this.scopes.push(scope);
 		return this;
@@ -115,6 +146,29 @@ Mock.prototype = {
 			.get(path)
 			.matchHeader('X-Auth-Token', mockOptions.token)
 			.reply(200, JSON.stringify(this.aCDNContainers));
+
+		this.scopes.push(scope);
+		return this;
+	},
+	CDNHead : function (container) {
+		var _container = _.find(this.aCDNContainers, { name : container });
+		var path = url.parse(mockOptions.cdn).pathname + '/' + container;
+		var scope = nock(mockOptions.cdn)
+			.head(path)
+			.matchHeader('X-Auth-Token', mockOptions.token);
+
+		if ( _container ) {
+			scope = scope.reply(204, '', {
+				'X-Cdn-Enabled' : _container.cdn_enabled ? 'True' : 'False',
+				'X-Ttl' : _container.ttl,
+				'X-Log-Retention' : _container.log_retention,
+				'X-Cdn-Uri' : _container.cdn_uri,
+				'X-Cdn-Ssl-Uri' : _container.cdn_ssl_uri,
+				'X-Cdn-Streaming-Uri' : _container.cdn_streaming_uri
+			});
+		} else {
+			scope = scope.reply(404);
+		}
 
 		this.scopes.push(scope);
 		return this;
