@@ -20,7 +20,7 @@
 		"lodash" : "2.4.1",
 		"async": ">= 0.2.9",
 		"mime": ">= 1.2.11",
-		"pkgcloud": "rossj/pkgcloud#0.8.17-fix-cdn403"
+		"pkgcloud": "git://github.com/rossj/pkgcloud.git#0.8.17-fix-cdn403"
 	},
 	"devDependencies": {
 		"mocha": "1.15.1",
