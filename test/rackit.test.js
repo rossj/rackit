@@ -21,7 +21,8 @@ var rackitOptions = {
 	region : 'DFW',
 	user : 'boopity',
 	key : 'bop',
-	tempURLKey : '3522d2sa'
+	tempURLKey : '3522d2sa',
+	useSNET : true
 };
 
 
@@ -226,7 +227,6 @@ describe('Rackit', function () {
 		});
 
 		it('should not return an error with good credentials', function (cb) {
-			this.timeout(10000);
 			superNock.typicalResponse().containerHead(['dev0']);
 
 			var rackit = new Rackit(rackitOptions);
@@ -324,7 +324,7 @@ describe('Rackit', function () {
 		describe('empty existing container', function () {
 			// Start off each test with a new, initialized rackit
 			beforeEach(function (cb) {
-				superNock.typicalResponse().containerHead(['empty0']);
+				superNock.typicalResponse().containerHead(['empty0', 'empty1']);
 				rackit = new Rackit(rackitOptions);
 				rackit.options.prefix = 'empty';
 				rackit.init(function (err) {
@@ -612,7 +612,7 @@ describe('Rackit', function () {
 		describe('with full existing container', function () {
 			// Start off each test with a new, initialized rackit
 			beforeEach(function (cb) {
-				superNock.typicalResponse().containerHead(['full0']);
+				superNock.typicalResponse().containerHead(['full0', 'full1']);
 				rackit = new Rackit(rackitOptions);
 				rackit.options.prefix = 'full';
 				rackit.init(function (err) {
