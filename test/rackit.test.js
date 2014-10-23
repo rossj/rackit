@@ -1074,7 +1074,7 @@ describe('Rackit', function () {
 
 				// Check the result contents
 				for (var i = 0; i < objects.length; i++) {
-					list.should.include(objects[i]);
+					list.should.containDeep([objects[i]]);
 				}
 
 				cb();
