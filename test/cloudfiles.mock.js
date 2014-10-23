@@ -180,6 +180,16 @@ Mock.prototype = {
 			var result = path.match(r)[0];
 			that.remove(result);
 		});
+		return this;
+	},
+	putAndHead : function (container, data, type, length) {
+		var that = this;
+		this.add(container, data, type, length, function(path) {
+			var r = new RegExp(container + '/.*', 'g');
+			var result = path.match(r)[0];
+			that.head(result);
+		});
+		return this;
 	},
 	add : function (container, data, type, length, cb) {
 		var path = url.parse(this.mockOptions.storage).pathname + '/' + container + '/filename';

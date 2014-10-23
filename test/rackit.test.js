@@ -356,7 +356,7 @@ describe('Rackit', function () {
 					var count = getFreeContainerCount(container);
 
 					// Perform the actual test
-					superNock.add(container, testFile.data, testFile.type, testFile.size);
+					superNock.putAndHead(container, testFile.data, testFile.type, testFile.size);
 					rackit.add(testFile.path, assertAdd(container, count + 1, cb));
 				});
 
@@ -365,7 +365,7 @@ describe('Rackit', function () {
 					var count = getFreeContainerCount(container);
 
 					var type = 'text/mytype';
-					superNock.add(container, testFile.data, type, testFile.size);
+					superNock.putAndHead(container, testFile.data, type, testFile.size);
 					rackit.add(testFile.path, { type : type }, assertAdd(container, count + 1, cb));
 				});
 
@@ -400,7 +400,7 @@ describe('Rackit', function () {
 					var count = getFreeContainerCount(container);
 
 					var stream = fs.createReadStream(testFile.path);
-					superNock.add(container, testFile.data, testFile.type);
+					superNock.putAndHead(container, testFile.data, testFile.type);
 					rackit.add(stream, {type : testFile.type}, assertAdd(container, count + 1, cb));
 				});
 
@@ -408,7 +408,7 @@ describe('Rackit', function () {
 					var container = 'empty0';
 					var count = getFreeContainerCount(container);
 
-					superNock.add(container, testFile.data, testFile.type);
+					superNock.putAndHead(container, testFile.data, testFile.type);
 
 					// Set up the small server that will forward the request to Rackit
 					var server = http.createServer(function (req, res) {
@@ -431,7 +431,7 @@ describe('Rackit', function () {
 					var container = 'empty0';
 					var count = getFreeContainerCount(container);
 
-					superNock.add(container, testFile.data, testFile.type, '' + testFile.size);
+					superNock.putAndHead(container, testFile.data, testFile.type, '' + testFile.size);
 
 					// Set up the small server that will forward the request to Rackit
 					var server = http.createServer(function (req, res) {
@@ -455,7 +455,7 @@ describe('Rackit', function () {
 					var container = 'empty0';
 					var count = getFreeContainerCount(container);
 
-					superNock.add(container, testFile.data, testFile.type);
+					superNock.putAndHead(container, testFile.data, testFile.type);
 
 					// Set up the small server that will forward the request to Rackit
 					var server = http.createServer(function (req, res) {
@@ -480,7 +480,7 @@ describe('Rackit', function () {
 					var count = getFreeContainerCount(container);
 					var type = 'text/pdf';
 
-					superNock.add(container, testFile.data, type);
+					superNock.putAndHead(container, testFile.data, type);
 
 					// Set up the small server that will forward the request to Rackit
 					var server = http.createServer(function (req, res) {
@@ -527,7 +527,7 @@ describe('Rackit', function () {
 				// Add on the mock for the add request
 				superNock
 					.createContainer(container)
-					.add(container, testFile.data, testFile.type, testFile.size);
+					.putAndHead(container, testFile.data, testFile.type, testFile.size);
 
 				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is not CDN enabled
@@ -551,7 +551,7 @@ describe('Rackit', function () {
 				superNock
 					.createContainer(container)
 					.enableCDN(container)
-					.add(container, testFile.data, testFile.type, testFile.size);
+					.putAndHead(container, testFile.data, testFile.type, testFile.size);
 
 				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is CDN enabled
@@ -576,8 +576,8 @@ describe('Rackit', function () {
 				superNock
 					.createContainer(container)
 					.createContainer(container)
-					.add(container, testFile.data, testFile.type, testFile.size)
-					.add(container, testFile.data, testFile.type, testFile.size);
+					.putAndHead(container, testFile.data, testFile.type, testFile.size)
+					.putAndHead(container, testFile.data, testFile.type, testFile.size);
 
 				// Upload two files in parallel
 				async.parallel({
@@ -634,7 +634,7 @@ describe('Rackit', function () {
 				// Add on the mock for the add request
 				superNock
 					.createContainer(container)
-					.add(container, testFile.data, testFile.type, testFile.size);
+					.putAndHead(container, testFile.data, testFile.type, testFile.size);
 
 				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is not CDN enabled
@@ -659,7 +659,7 @@ describe('Rackit', function () {
 				superNock
 					.createContainer(container)
 					.enableCDN(container)
-					.add(container, testFile.data, testFile.type, testFile.size);
+					.putAndHead(container, testFile.data, testFile.type, testFile.size);
 
 				rackit.add(testFile.path, assertAdd(container, 1, function () {
 					// Assert the container is CDN enabled
@@ -684,8 +684,8 @@ describe('Rackit', function () {
 				superNock
 					.createContainer(container)
 					.createContainer(container)
-					.add(container, testFile.data, testFile.type, testFile.size)
-					.add(container, testFile.data, testFile.type, testFile.size);
+					.putAndHead(container, testFile.data, testFile.type, testFile.size)
+					.putAndHead(container, testFile.data, testFile.type, testFile.size);
 
 				// Upload two files in parallel
 				async.parallel({
