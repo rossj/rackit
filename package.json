@@ -20,7 +20,7 @@
 		"lodash" : "2.4.1",
 		"async": ">= 0.2.9",
 		"mime": ">= 1.2.11",
-		"pkgcloud": "1.0.2"
+		"pkgcloud": "git://github.com/pkgcloud/pkgcloud.git#bbdbf25774ef44cdb3f4bad8e05b7bf9ffd2d5de"
 	},
 	"devDependencies": {
 		"mocha": "2.0.1",
