@@ -46,9 +46,11 @@ Mock.prototype = {
 	},
 	auth : function (username, apiKey) {
 		// Setup nock to respond to a good auth request, twice
-		var authURI = this.rackitOptions.authURIs[this.rackitOptions.authRegion];
-		var path = url.parse(authURI).pathname + '/tokens';
+		var authURIObj = url.parse(this.rackitOptions.authURIs[this.rackitOptions.authRegion]);
+		var authURI = authURIObj.protocol + '//' + authURIObj.hostname;
+		var path = authURIObj.pathname + '/tokens';
 
+		// remove the /v2.0 on the end of authURI
 		var scope = nock(authURI)
 			.post(path, {
 				"auth" : {
@@ -73,8 +75,11 @@ Mock.prototype = {
 		return this;
 	},
 	tempURL : function (key) {
-		var path = url.parse(this.mockOptions.storage).pathname;
-		var scope = nock(this.mockOptions.storage)
+		var URIObj = url.parse(this.mockOptions.storage);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname;
+
+		var scope = nock(URI)
 			.post(path)
 			.matchHeader('X-Account-Meta-Temp-Url-Key', key)
 			.reply(204, 'No Content');
@@ -94,8 +99,11 @@ Mock.prototype = {
 		return this;
 	},
 	storage : function () {
-		var path = url.parse(this.mockOptions.storage).pathname + '?format=json';
-		var scope = nock(this.mockOptions.storage)
+		var URIObj = url.parse(this.mockOptions.storage);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname + '?format=json';
+
+		var scope = nock(URI)
 			.get(path)
 			.matchHeader('X-Auth-Token', this.mockOptions.token)
 			.reply(200, JSON.stringify(this.aContainers));
@@ -105,8 +113,12 @@ Mock.prototype = {
 	},
 	storageHead : function (container) {
 		var _container = _.find(this.aContainers, { name : container });
-		var path = url.parse(this.mockOptions.storage).pathname + '/' + container;
-		var scope = nock(this.mockOptions.storage)
+
+		var URIObj = url.parse(this.mockOptions.storage);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname + '/' + container;
+
+		var scope = nock(URI)
 			.head(path)
 			.matchHeader('X-Auth-Token', this.mockOptions.token);
 
@@ -141,8 +153,11 @@ Mock.prototype = {
 		return containers;
 	},
 	CDN : function () {
-		var path = url.parse(this.mockOptions.cdn).pathname + '?format=json';
-		var scope = nock(this.mockOptions.cdn)
+		var URIObj = url.parse(this.mockOptions.cdn);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname + '?format=json';
+
+		var scope = nock(URI)
 			.get(path)
 			.matchHeader('X-Auth-Token', this.mockOptions.token)
 			.reply(200, JSON.stringify(this.aCDNContainers));
@@ -152,8 +167,12 @@ Mock.prototype = {
 	},
 	CDNHead : function (container) {
 		var _container = _.find(this.aCDNContainers, { name : container });
-		var path = url.parse(this.mockOptions.cdn).pathname + '/' + container;
-		var scope = nock(this.mockOptions.cdn)
+
+		var URIObj = url.parse(this.mockOptions.cdn);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname + '/' + container;
+
+		var scope = nock(URI)
 			.head(path)
 			.matchHeader('X-Auth-Token', this.mockOptions.token);
 
@@ -192,9 +211,12 @@ Mock.prototype = {
 		return this;
 	},
 	add : function (container, data, type, length, cb) {
-		var path = url.parse(this.mockOptions.storage).pathname + '/' + container + '/filename';
+		var URIObj = url.parse(this.mockOptions.storage);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname + '/' + container + '/filename';
+
 		var lastPath;
-		var scope = nock(this.mockOptions.storage)
+		var scope = nock(URI)
 			.filteringPath(function(path) {
 				lastPath = path;
 				var r = new RegExp(container + '/.*', 'g');
@@ -233,16 +255,22 @@ Mock.prototype = {
 		return this;
 	},
 	head : function (cloudpath, response, headers) {
-		var path = url.parse(this.mockOptions.storage).pathname + '/' + cloudpath + '?format=json';
-		var scope = nock(this.mockOptions.storage)
+		var URIObj = url.parse(this.mockOptions.storage);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname + '/' + cloudpath + '?format=json';
+
+		var scope = nock(URI)
 			.head(path)
 			.reply(response, '', headers);
 		this.scopes.push(scope);
 		return this;
 	},
 	post : function (cloudpath, response, headers) {
-		var path = url.parse(this.mockOptions.storage).pathname + '/' + cloudpath;
-		var scope = nock(this.mockOptions.storage)
+		var URIObj = url.parse(this.mockOptions.storage);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname + '/' + cloudpath;
+
+		var scope = nock(URI)
 			.post(path);
 
 		for (var key in headers) {
@@ -254,16 +282,22 @@ Mock.prototype = {
 		return this;
 	},
 	get : function (cloudpath, data) {
-		var path = url.parse(this.mockOptions.storage).pathname + '/' + cloudpath;
-		var scope = nock(this.mockOptions.storage)
+		var URIObj = url.parse(this.mockOptions.storage);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname + '/' + cloudpath;
+
+		var scope = nock(URI)
 			.get(path)
 			.reply(200, data);
 		this.scopes.push(scope);
 		return this;
 	},
 	remove : function (cloudpath, response) {
-		var path = url.parse(this.mockOptions.storage).pathname + '/' + (cloudpath || 'cloudpath');
-		var scope = nock(this.mockOptions.storage);
+		var URIObj = url.parse(this.mockOptions.storage);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname + '/' + (cloudpath || 'cloudpath');
+
+		var scope = nock(URI);
 
 		if (!cloudpath)
 			scope = scope.filteringPath(function(path) {
@@ -276,8 +310,11 @@ Mock.prototype = {
 		return this;
 	},
 	createContainer : function (container) {
-		var path = url.parse(this.mockOptions.storage).pathname + '/' + container;
-		var scope = nock(this.mockOptions.storage)
+		var URIObj = url.parse(this.mockOptions.storage);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname + '/' + container;
+
+		var scope = nock(URI)
 			.put(path)
 			.matchHeader('X-Auth-Token', this.mockOptions.token)
 			.reply(201);
@@ -286,8 +323,11 @@ Mock.prototype = {
 		return this;
 	},
 	enableCDN : function (container) {
-		var path = url.parse(this.mockOptions.cdn).pathname + '/' + container;
-		var scope = nock(this.mockOptions.cdn)
+		var URIObj = url.parse(this.mockOptions.cdn);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+		var path = URIObj.pathname + '/' + container;
+
+		var scope = nock(URI)
 			.put(path)
 			.matchHeader('X-Auth-Token', this.mockOptions.token)
 			.reply(201);
@@ -295,8 +335,10 @@ Mock.prototype = {
 		this.scopes.push(scope);
 
 		// pkgcloud refreshes container info after CDN enabling
-		path = url.parse(this.mockOptions.storage).pathname + '/' + container;
-		scope = nock(this.mockOptions.storage)
+		var URIObjStorage = url.parse(this.mockOptions.storage);
+		var URIStorage = URIObjStorage.protocol + '//' + URIObjStorage.hostname;
+		path = URIObjStorage.pathname + '/' + container;
+		var scope = nock(URIStorage)
 			.head(path)
 			.matchHeader('X-Auth-Token', this.mockOptions.token)
 			.reply(204, '', {
@@ -307,8 +349,8 @@ Mock.prototype = {
 		this.scopes.push(scope);
 
 		// pkgcloud refreshes cdn container info after CDN enabling
-		path = url.parse(this.mockOptions.cdn).pathname + '/' + container;
-		scope = nock(this.mockOptions.cdn)
+		path = URIObj.pathname + '/' + container;
+		var scope = nock(URI)
 			.head(path)
 			.matchHeader('X-Auth-Token', this.mockOptions.token)
 			.reply(204, '', {
@@ -324,7 +366,11 @@ Mock.prototype = {
 		var containers = this.getPrefixedContainers(prefix);
 		var i = containers.length;
 		var container, basepath, path, count, j, objects;
-		var scope = nock(this.mockOptions.storage);
+
+		var URIObj = url.parse(this.mockOptions.storage);
+		var URI = URIObj.protocol + '//' + URIObj.hostname;
+
+		var scope = nock(URI);
 
 		// There may be more than one container with this prefix, and the client will be requesting from all
 		while ( i-- ) {
@@ -334,7 +380,7 @@ Mock.prototype = {
 			if ( container.name.indexOf(prefix) !== 0 )
 				continue;
 
-			basepath = url.parse(this.mockOptions.storage).pathname + '/' + container.name;
+			basepath = URIObj.pathname + '/' + container.name;
 			basepath += '?format=json&limit=' + limit;
 
 			// If the container has no objects, respond with 204.
