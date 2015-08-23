@@ -210,6 +210,16 @@ Mock.prototype = {
 		});
 		return this;
 	},
+	putHeadDelete : function (container, data, type, length) {
+		var that = this;
+		this.add(container, data, type, length, function(path) {
+			var r = new RegExp(container + '/.*', 'g');
+			var result = path.match(r)[0];
+			that.head(result);
+			that.remove(result);
+		});
+		return this;
+	},
 	add : function (container, data, type, length, cb) {
 		var URIObj = url.parse(this.mockOptions.storage);
 		var URI = URIObj.protocol + '//' + URIObj.hostname;

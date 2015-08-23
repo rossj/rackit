@@ -1,31 +1,37 @@
 {
-	"name": "rackit",
-	"description": "Super simple Rackspace Cloud Files client",
-	"keywords": ["api", "storage", "rackspace", "cloud", "cloudfiles"],
-	"version": "0.2.2",
-	"author": "Ross Johnson <ross@mazira.com>",
-	"contributors": [],
-	"repository": {
-		"type": "git",
-		"url": "http://github.com/rossj/rackit"
-	},
-	"main": "./lib/main.js",
-	"scripts": {
-		"test": "mocha --reporter spec"
-	},
-	"engines": {
-		"node": ">= 0.8.x"
-	},
-	"dependencies": {
-		"lodash" : "2.4.1",
-		"async": ">= 0.2.9",
-		"mime": ">= 1.2.11",
-		"pkgcloud": "1.0.2"
-	},
-	"devDependencies": {
-		"mocha": "2.0.1",
-		"should": "4.1.0",
-		"nock": "2.3.0",
-		"request": ">= 2.29.0"
-	}
+  "name": "rackit",
+  "description": "Super simple Rackspace Cloud Files client",
+  "keywords": [
+    "api",
+    "storage",
+    "rackspace",
+    "cloud",
+    "cloudfiles"
+  ],
+  "version": "0.2.2",
+  "author": "Ross Johnson <ross@mazira.com>",
+  "contributors": [],
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/rossj/rackit"
+  },
+  "main": "./lib/main.js",
+  "scripts": {
+    "test": "mocha --reporter spec"
+  },
+  "engines": {
+    "node": ">= 0.8.x"
+  },
+  "dependencies": {
+    "async": ">= 0.2.9",
+    "lodash": "2.4.1",
+    "mime": ">= 1.2.11",
+    "pkgcloud": "1.0.2"
+  },
+  "devDependencies": {
+    "mocha": "2.0.1",
+    "nock": "^2.10.0",
+    "request": ">= 2.29.0",
+    "should": "4.1.0"
+  }
 }
