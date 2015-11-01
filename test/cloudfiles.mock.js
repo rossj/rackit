@@ -291,14 +291,18 @@ Mock.prototype = {
 		this.scopes.push(scope);
 		return this;
 	},
-	get : function (cloudpath, data) {
+	get : function (cloudpath, data, headers) {
 		var URIObj = url.parse(this.mockOptions.storage);
 		var URI = URIObj.protocol + '//' + URIObj.hostname;
 		var path = URIObj.pathname + '/' + cloudpath;
 
-		var scope = nock(URI)
-			.get(path)
-			.reply(200, data);
+		var scope = nock(URI).get(path);
+
+		for (var key in headers) {
+			scope = scope.matchHeader(key, headers[key]);
+		}
+
+		scope = scope.reply(200, data);
 		this.scopes.push(scope);
 		return this;
 	},
