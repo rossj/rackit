@@ -58,6 +58,9 @@ When initializing Rackit, here are the options and defaults:
 	authRegion : 'US', // Specifies the authentication API entry point - other option of 'UK'
 	region : '', // Specifies the geographic datacenter to prefer - defaults to the user's default region. Explicit options of 'ORD', 'DFW', 'HKG', 'LON', 'IAD', 'SYD' are accepted.
 	tempURLKey : null, // A secret for generating temporary URLs
+	containerMetadata: { // Add default metadata to Cloud File containers (optional)
+		"key": "value"
+	},
 	useSNET : false,
 	useCDN : true,
 	useSSL : true, // Specifies whether to use SSL (https) for CDN links
